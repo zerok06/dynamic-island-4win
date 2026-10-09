@@ -7,6 +7,11 @@ export interface AppSettings {
   startOnBoot: boolean;
   selectedMonitor: string;
   language: 'en' | 'vi';
+  effectsEnabled: boolean;
+  weatherEnabled: boolean;
+  volumeHudEnabled: boolean;
+  calendarEnabled: boolean;
+  calendarSource: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -16,6 +21,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   startOnBoot: false,
   selectedMonitor: '',
   language: 'en',
+  effectsEnabled: true,
+  weatherEnabled: true,
+  volumeHudEnabled: true,
+  calendarEnabled: true,
+  calendarSource: '',
 };
 
 export function useSettings() {

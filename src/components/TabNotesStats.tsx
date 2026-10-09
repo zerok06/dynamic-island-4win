@@ -98,10 +98,10 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
   return (
     <div className="flex flex-col gap-3.5 py-0.5 animate-content-reveal">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
+      <div className="flex items-center justify-between border-b border-island/[0.04] pb-2">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[13px] font-bold text-white/50 hover:text-white transition-all hover:-translate-x-0.5"
+          className="flex items-center gap-1.5 text-[13px] font-bold text-island/50 hover:text-island transition-all hover:-translate-x-0.5"
         >
           <ChevronLeft className="w-[18px] h-[18px]" />
           {t.tasksTitle}
@@ -116,7 +116,7 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
       {/* Rings & Streak Cards (Row Layout) */}
       <div className="grid grid-cols-3 gap-2.5 mt-0.5">
         {/* Week Completion */}
-        <div className="relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
+        <div className="relative overflow-hidden bg-gradient-to-b from-island/[0.03] to-transparent border border-island/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
           <div className="relative w-14 h-14 flex items-center justify-center">
             <svg className="absolute w-full h-full transform -rotate-90">
               <defs>
@@ -125,7 +125,7 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
                   <stop offset="100%" stopColor="#059669" />
                 </linearGradient>
               </defs>
-              <circle cx="28" cy="28" r={r} className="stroke-white/5 fill-none" strokeWidth="3" />
+              <circle cx="28" cy="28" r={r} className="stroke-island/5 fill-none" strokeWidth="3" />
               <circle
                 cx="28"
                 cy="28"
@@ -138,13 +138,13 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
                 strokeLinecap="round"
               />
             </svg>
-            <span className="text-[12px] font-mono font-black text-white">{Math.round(stats.week_completion_rate)}%</span>
+            <span className="text-[12px] font-mono font-black text-island">{Math.round(stats.week_completion_rate)}%</span>
           </div>
-          <span className="text-[9.5px] text-white/40 tracking-wider font-extrabold uppercase text-center">{t.statsThisWeek}</span>
+          <span className="text-[9.5px] text-island/40 tracking-wider font-extrabold uppercase text-center">{t.statsThisWeek}</span>
         </div>
 
         {/* Month Completion */}
-        <div className="relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
+        <div className="relative overflow-hidden bg-gradient-to-b from-island/[0.03] to-transparent border border-island/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
           <div className="relative w-14 h-14 flex items-center justify-center">
             <svg className="absolute w-full h-full transform -rotate-90">
               <defs>
@@ -153,7 +153,7 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
                   <stop offset="100%" stopColor="#2563eb" />
                 </linearGradient>
               </defs>
-              <circle cx="28" cy="28" r={r} className="stroke-white/5 fill-none" strokeWidth="3" />
+              <circle cx="28" cy="28" r={r} className="stroke-island/5 fill-none" strokeWidth="3" />
               <circle
                 cx="28"
                 cy="28"
@@ -166,28 +166,28 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
                 strokeLinecap="round"
               />
             </svg>
-            <span className="text-[12px] font-mono font-black text-white">{Math.round(stats.month_completion_rate)}%</span>
+            <span className="text-[12px] font-mono font-black text-island">{Math.round(stats.month_completion_rate)}%</span>
           </div>
-          <span className="text-[9.5px] text-white/40 tracking-wider font-extrabold uppercase text-center">{t.statsThisMonth}</span>
+          <span className="text-[9.5px] text-island/40 tracking-wider font-extrabold uppercase text-center">{t.statsThisMonth}</span>
         </div>
 
         {/* Streak Flame */}
-        <div className="relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
+        <div className="relative overflow-hidden bg-gradient-to-b from-island/[0.03] to-transparent border border-island/[0.05] rounded-2xl p-2.5 flex flex-col items-center justify-center gap-2">
           {/* Flame Glow */}
           <div className="absolute inset-0 bg-orange-500/5 filter blur-md pointer-events-none" />
           <div className="relative w-14 h-14 flex flex-col items-center justify-center z-10">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/20 shadow-inner">
               <Flame className="w-5 h-5 text-orange-500 fill-orange-500 filter drop-shadow-[0_0_8px_rgba(249,115,22,0.6)] animate-pulse" />
             </div>
-            <span className="text-[14px] font-mono font-black text-white mt-1 leading-none">{stats.streak_days}</span>
+            <span className="text-[14px] font-mono font-black text-island mt-1 leading-none">{stats.streak_days}</span>
           </div>
-          <span className="text-[9.5px] text-white/40 tracking-wider font-extrabold uppercase text-center">{t.statsStreakDays}</span>
+          <span className="text-[9.5px] text-island/40 tracking-wider font-extrabold uppercase text-center">{t.statsStreakDays}</span>
         </div>
       </div>
 
       {/* Completion Trend (Glow & Area Fill) */}
-      <div className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-3 flex flex-col gap-2 relative overflow-hidden">
-        <span className="text-[11px] text-white/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
+      <div className="bg-island/[0.02] border border-island/[0.04] rounded-2xl p-3 flex flex-col gap-2 relative overflow-hidden">
+        <span className="text-[11px] text-island/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-success-color" />
           {t.statsTrend}
         </span>
@@ -200,8 +200,8 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
               </linearGradient>
             </defs>
             {/* Grid Line */}
-            <line x1="0" y1={chartHeight} x2={chartWidth} y2={chartHeight} className="stroke-white/5" strokeWidth="1" />
-            <line x1="0" y1="0" x2={chartWidth} y2="0" className="stroke-white/[0.02]" strokeWidth="1" />
+            <line x1="0" y1={chartHeight} x2={chartWidth} y2={chartHeight} className="stroke-island/5" strokeWidth="1" />
+            <line x1="0" y1="0" x2={chartWidth} y2="0" className="stroke-island/[0.02]" strokeWidth="1" />
             
             {/* Area Fill */}
             <polygon points={fillPoints} fill="url(#chartFillGrad)" />
@@ -220,13 +220,13 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
       </div>
 
       {/* Heatmap (Centered Grid Layout) */}
-      <div className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-3 flex flex-col gap-2 relative">
+      <div className="bg-island/[0.02] border border-island/[0.04] rounded-2xl p-3 flex flex-col gap-2 relative">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-white/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
+          <span className="text-[11px] text-island/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
             <Grid className="w-3.5 h-3.5 text-success-color" />
             {t.statsHeatmap}
           </span>
-          <span className="text-[10px] text-white/50 font-bold transition-all duration-200">
+          <span className="text-[10px] text-island/50 font-bold transition-all duration-200">
             {hoveredCell 
               ? `${hoveredCell.date} • ${hoveredCell.count} ${hoveredCell.count !== 1 ? t.statsTasks : t.statsTask}` 
               : t.statsHoverCells}
@@ -240,7 +240,7 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
                 const val = stats.activity_grid[index] || 0;
                 
                 // Color scaling matching the blue theme
-                let bgClass = 'bg-white/[0.03] border border-white/[0.01]';
+                let bgClass = 'bg-island/[0.03] border border-island/[0.01]';
                 if (val === 1) bgClass = 'bg-blue-950/40 border border-blue-900/30';
                 if (val === 2) bgClass = 'bg-blue-800/40 border border-blue-700/30';
                 if (val === 3) bgClass = 'bg-blue-600/60';
@@ -263,9 +263,9 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
         </div>
 
         {/* Legend */}
-        <div className="flex justify-end items-center gap-1.5 mt-2 text-[9px] text-white/35 font-medium select-none pr-1">
+        <div className="flex justify-end items-center gap-1.5 mt-2 text-[9px] text-island/35 font-medium select-none pr-1">
           <span>{t.statsLess}</span>
-          <div className="w-2.5 h-2.5 rounded-[1px] bg-white/[0.03] border border-white/[0.01]" />
+          <div className="w-2.5 h-2.5 rounded-[1px] bg-island/[0.03] border border-island/[0.01]" />
           <div className="w-2.5 h-2.5 rounded-[1px] bg-blue-950/40 border border-blue-900/30" />
           <div className="w-2.5 h-2.5 rounded-[1px] bg-blue-800/40 border border-blue-700/30" />
           <div className="w-2.5 h-2.5 rounded-[1px] bg-blue-600/60" />
@@ -282,9 +282,9 @@ export const TabNotesStats: React.FC<TabNotesStatsProps> = ({ onBack, language }
           { label: t.statsActive, value: `${stats.active_days_count}d` },
           { label: t.statsDone30d, value: stats.done_30d_count },
         ].map((item, i) => (
-          <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-2 flex flex-col items-center justify-center">
-            <span className="text-[9px] text-white/35 font-bold uppercase tracking-wider">{item.label}</span>
-            <span className="text-[13px] font-black font-mono text-white mt-1 leading-none">{item.value}</span>
+          <div key={i} className="bg-island/[0.02] border border-island/[0.04] rounded-xl p-2 flex flex-col items-center justify-center">
+            <span className="text-[9px] text-island/35 font-bold uppercase tracking-wider">{item.label}</span>
+            <span className="text-[13px] font-black font-mono text-island mt-1 leading-none">{item.value}</span>
           </div>
         ))}
       </div>

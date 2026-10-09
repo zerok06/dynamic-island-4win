@@ -450,7 +450,8 @@ fn get_vibe_db_conn() -> Result<Connection, String> {
             due_date TEXT,
             rollover_count INTEGER NOT NULL DEFAULT 0,
             created_at_unix_s INTEGER NOT NULL,
-            completed_at_unix_s INTEGER
+            completed_at_unix_s INTEGER,
+            sort_order INTEGER
         )",
         [],
     )
@@ -464,6 +465,12 @@ fn get_vibe_db_conn() -> Result<Connection, String> {
     );
     let _ = conn.execute(
         "ALTER TABLE local_tasks ADD COLUMN completed_at_unix_s INTEGER",
+        [],
+    );
+    let _ = conn.execute("ALTER TABLE local_tasks ADD COLUMN sort_order INTEGER", []);
+    // Backfill the manual order from the creation time for existing rows
+    let _ = conn.execute(
+        "UPDATE local_tasks SET sort_order = created_at_unix_s WHERE sort_order IS NULL",
         [],
     );
 
@@ -556,7 +563,7 @@ fn get_local_tasks(today: String) -> Result<Vec<LocalTask>, String> {
         );
     }
 
-    let mut stmt = conn.prepare("SELECT id, name, done, due_date, rollover_count, created_at_unix_s, completed_at_unix_s FROM local_tasks WHERE done = 1 OR (done = 0 AND (due_date IS NULL OR due_date <= ?1)) ORDER BY created_at_unix_s ASC").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT id, name, done, due_date, rollover_count, created_at_unix_s, completed_at_unix_s FROM local_tasks WHERE done = 1 OR (done = 0 AND (due_date IS NULL OR due_date <= ?1)) ORDER BY COALESCE(sort_order, created_at_unix_s) ASC").map_err(|e| e.to_string())?;
     let task_iter = stmt
         .query_map([&today], |row| {
             let done_int: i32 = row.get(2)?;
@@ -590,8 +597,8 @@ fn add_local_task(name: String, due_date: Option<String>, today: String) -> Resu
         |row| row.get(0)
     ).map_err(|e| e.to_string())?;
 
-    if active_count >= 3 {
-        return Err("Cannot exceed 3 active tasks".to_string());
+    if active_count >= 20 {
+        return Err("Cannot exceed 20 active tasks".to_string());
     }
 
     let now_ns = SystemTime::now()
@@ -605,7 +612,7 @@ fn add_local_task(name: String, due_date: Option<String>, today: String) -> Resu
         .as_secs() as i64;
 
     conn.execute(
-        "INSERT INTO local_tasks (id, name, done, due_date, rollover_count, created_at_unix_s) VALUES (?1, ?2, 0, ?3, 0, ?4)",
+        "INSERT INTO local_tasks (id, name, done, due_date, rollover_count, created_at_unix_s, sort_order) VALUES (?1, ?2, 0, ?3, 0, ?4, ?4)",
         params![task_id, name, due_date, now_s]
     ).map_err(|e| e.to_string())?;
 
@@ -656,14 +663,14 @@ fn toggle_local_task(id: String) -> Result<(), String> {
                         |row| row.get(0)
                     ).map_err(|e| e.to_string())?;
 
-                    if active_count < 3 {
+                    if active_count < 20 {
                         let now_ns = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
                             .unwrap()
                             .as_nanos();
                         let next_task_id = format!("task_{}", now_ns);
                         let _ = conn.execute(
-                            "INSERT INTO local_tasks (id, name, done, due_date, rollover_count, created_at_unix_s) VALUES (?1, ?2, 0, ?3, 0, ?4)",
+                            "INSERT INTO local_tasks (id, name, done, due_date, rollover_count, created_at_unix_s, sort_order) VALUES (?1, ?2, 0, ?3, 0, ?4, ?4)",
                             params![next_task_id, name, next_date_str, now_s]
                         );
                     }
@@ -688,6 +695,25 @@ fn update_local_task(id: String, name: String) -> Result<(), String> {
     let conn = get_vibe_db_conn()?;
     conn.execute("UPDATE local_tasks SET name = ?1 WHERE id = ?2", params![name, id])
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// Lưu thứ tự thủ công của danh sách nhiệm vụ sau khi kéo thả | Persist the manual order of the task list after a drag & drop
+#[tauri::command]
+fn reorder_local_tasks(ordered_ids: Vec<String>) -> Result<(), String> {
+    let conn = get_vibe_db_conn()?;
+    conn.execute("BEGIN TRANSACTION", [])
+        .map_err(|e| e.to_string())?;
+    for (index, id) in ordered_ids.iter().enumerate() {
+        if let Err(e) = conn.execute(
+            "UPDATE local_tasks SET sort_order = ?1 WHERE id = ?2",
+            params![index as i64, id],
+        ) {
+            let _ = conn.execute("ROLLBACK", []);
+            return Err(e.to_string());
+        }
+    }
+    conn.execute("COMMIT", []).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1137,7 +1163,6 @@ fn start_fullscreen_auto_hide(window: tauri::WebviewWindow) {
             fn GetWindowRect(hwnd: isize, lpRect: *mut RECT) -> i32;
             fn GetSystemMetrics(nIndex: i32) -> i32;
             fn GetCursorPos(lpPoint: *mut POINT) -> i32;
-            fn IsZoomed(hwnd: isize) -> i32;
             fn GetWindowTextW(hwnd: isize, lpString: *mut u16, nMaxCount: i32) -> i32;
             fn GetShellWindow() -> isize;
             fn GetAsyncKeyState(vKey: i32) -> i16;
@@ -1249,17 +1274,18 @@ fn start_fullscreen_auto_hide(window: tauri::WebviewWindow) {
                             let screen_width = unsafe { GetSystemMetrics(0) }; // SM_CXSCREEN
                             let screen_height = unsafe { GetSystemMetrics(1) }; // SM_CYSCREEN
 
-                            let is_maximized = unsafe { IsZoomed(fg_hwnd) } != 0;
                             let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
                             let has_rect = unsafe { GetWindowRect(fg_hwnd, &mut rect) } != 0;
-                            
+
+                            // Chỉ tự ẩn khi ứng dụng chạy toàn màn hình thật sự (game, video). Cửa sổ phóng to (maximized) vẫn giữ đảo hiển thị.
+                            // Only auto-hide for genuine fullscreen apps (games, videos). Maximized windows keep the island visible.
                             let is_fullscreen = has_rect && 
                                 rect.left <= 2 && 
                                 rect.top <= 2 && 
                                 (rect.right - rect.left).abs() >= screen_width - 5 && 
                                 (rect.bottom - rect.top).abs() >= screen_height - 5;
 
-                            should_hide_trigger = is_maximized || is_fullscreen;
+                            should_hide_trigger = is_fullscreen;
                         }
                     }
                 }
@@ -1273,15 +1299,32 @@ fn start_fullscreen_auto_hide(window: tauri::WebviewWindow) {
                 let scale_factor = window.scale_factor().unwrap_or(1.0);
                 let center_x = last_win_pos.x + (last_win_size.width as i32) / 2;
 
-                // Activation zone: relative to window's physical position
-                let in_activation_zone = pt.y >= last_win_pos.y 
-                    && pt.y <= last_win_pos.y + (12.0 * scale_factor) as i32 
+                // Đảo được gắn cao hơn mép trên màn hình 12px logic, nên last_win_pos.y là số âm.
+                // Dùng đúng hình học thật: khi mở rộng lấy toàn bộ chiều cao cửa sổ để click bên trong bảng không bị ẩn.
+                // The island is docked 12 logical px above the screen top, so last_win_pos.y is negative.
+                // Use real geometry: full window height when expanded so clicks inside the panel never hide it.
+                let active_width = ACTIVE_ISLAND_WIDTH.load(std::sync::atomic::Ordering::Relaxed) as f64;
+                let is_expanded = last_win_size.height > ((110.0 * scale_factor) as u32);
+                let island_height = if is_expanded {
+                    last_win_size.height as f64
+                } else {
+                    50.0 * scale_factor
+                };
+                let margin = (10.0 * scale_factor) as i32;
+                let keep_half_width =
+                    ((active_width / 2.0 * scale_factor) as i32 + margin).max((220.0 * scale_factor) as i32);
+
+                // Vùng kích hoạt: dải sát mép trên màn hình, căn giữa theo đảo
+                // Activation strip: the top edge of the screen, centered on the island
+                let in_activation_zone = pt.y >= last_win_pos.y - margin
+                    && pt.y <= last_win_pos.y + (20.0 * scale_factor) as i32
                     && (pt.x - center_x).abs() < (220.0 * scale_factor) as i32;
-                
-                // Keep zone: relative to window's physical position
-                let in_keep_zone = pt.y >= last_win_pos.y 
-                    && pt.y <= last_win_pos.y + (50.0 * scale_factor) as i32 
-                    && (pt.x - center_x).abs() < (250.0 * scale_factor) as i32;
+
+                // Vùng giữ: toàn bộ đảo (thu gọn hoặc mở rộng) để thao tác không làm nó biến mất
+                // Keep zone: the whole island (compact or expanded) so interacting never hides it
+                let in_keep_zone = pt.y >= last_win_pos.y - margin
+                    && pt.y <= last_win_pos.y + island_height as i32 + margin
+                    && (pt.x - center_x).abs() <= keep_half_width;
 
                 if is_hidden {
                     if in_activation_zone {
@@ -1552,6 +1595,339 @@ fn update_island_width(width: u32) {
     ACTIVE_ISLAND_WIDTH.store(width, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[derive(Serialize, Clone)]
+struct SystemColors {
+    theme: String,
+    accent: String,
+}
+
+// Đọc chế độ sáng/tối của ứng dụng Windows từ registry | Read the Windows app light/dark mode from the registry
+fn read_system_theme() -> String {
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(key) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize") {
+        if let Ok(value) = key.get_value::<u32, _>("AppsUseLightTheme") {
+            return if value == 0 { "dark".to_string() } else { "light".to_string() };
+        }
+    }
+    "dark".to_string()
+}
+
+// Đọc màu nhấn (accent color) hiện tại của Windows qua WinRT, có dự phòng qua registry | Read the current Windows accent color via WinRT, with a registry fallback
+fn read_system_accent() -> String {
+    use windows::UI::ViewManagement::{UIColorType, UISettings};
+    if let Ok(settings) = UISettings::new() {
+        if let Ok(color) = settings.GetColorValue(UIColorType::Accent) {
+            if color.R != 0 || color.G != 0 || color.B != 0 {
+                return format!("#{:02x}{:02x}{:02x}", color.R, color.G, color.B);
+            }
+        }
+    }
+
+    // Dự phòng: giá trị DWM AccentColor lưu dạng 0xAABBGGRR | Fallback: DWM AccentColor is stored as 0xAABBGGRR
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(key) = hkcu.open_subkey("Software\\Microsoft\\Windows\\DWM") {
+        if let Ok(value) = key.get_value::<u32, _>("AccentColor") {
+            let r = (value & 0xFF) as u8;
+            let g = ((value >> 8) & 0xFF) as u8;
+            let b = ((value >> 16) & 0xFF) as u8;
+            return format!("#{:02x}{:02x}{:02x}", r, g, b);
+        }
+    }
+
+    "#007aff".to_string()
+}
+
+#[tauri::command]
+fn get_system_colors() -> SystemColors {
+    SystemColors {
+        theme: read_system_theme(),
+        accent: read_system_accent(),
+    }
+}
+
+// Theo dõi thay đổi theme/màu nhấn theo thời gian thực và phát sự kiện cho frontend | Watch theme/accent changes live and emit to the frontend
+fn start_system_color_listener(app_handle: AppHandle) {
+    std::thread::spawn(move || {
+        let mut last_theme = String::new();
+        let mut last_accent = String::new();
+        loop {
+            let theme = read_system_theme();
+            let accent = read_system_accent();
+            if theme != last_theme || accent != last_accent {
+                last_theme = theme.clone();
+                last_accent = accent.clone();
+                let _ = app_handle.emit("system-color-changed", SystemColors { theme, accent });
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+        }
+    });
+}
+
+// ── System tray: persistent pending-tasks indicator ──────────────────────────
+static TRAY_LANG: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0); // 0 = en, 1 = vi
+
+// (pending, open, refresh, quit, none)
+fn tray_labels() -> (&'static str, &'static str, &'static str, &'static str, &'static str) {
+    match TRAY_LANG.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => ("Đang chờ", "Mở nhiệm vụ", "Làm mới", "Thoát", "Không có nhiệm vụ"),
+        _ => ("Pending", "Open tasks", "Refresh", "Quit", "No pending tasks"),
+    }
+}
+
+// Ngày UTC hôm nay theo định dạng YYYY-MM-DD (khớp với frontend dùng toISOString) | Today's UTC date as YYYY-MM-DD (matches the frontend toISOString)
+fn today_utc() -> String {
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let days = secs.div_euclid(86400);
+    let z = days + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!("{:04}-{:02}-{:02}", y, m, d)
+}
+
+// Danh sách tác vụ đang chờ (chưa xong và đến hạn hôm nay hoặc quá hạn) | Pending tasks (not done and due today or overdue)
+fn get_pending_tasks_for_tray() -> Vec<(String, String)> {
+    let today = today_utc();
+    let conn = match get_vibe_db_conn() {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+    let mut stmt = match conn.prepare(
+        "SELECT id, name FROM local_tasks WHERE done = 0 AND (due_date IS NULL OR due_date <= ?1) ORDER BY COALESCE(sort_order, created_at_unix_s) ASC",
+    ) {
+        Ok(s) => s,
+        Err(_) => return Vec::new(),
+    };
+    let rows = match stmt.query_map([&today], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    }) {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+    rows.filter_map(|r| r.ok()).collect()
+}
+
+fn build_tray_menu<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> tauri::Result<tauri::menu::Menu<R>> {
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+
+    let tasks = get_pending_tasks_for_tray();
+    let (pending, open, refresh, quit, none) = tray_labels();
+
+    let menu = Menu::new(app)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "header",
+        format!("{}: {}", pending, tasks.len()),
+        false,
+        None::<&str>,
+    )?)?;
+
+    if tasks.is_empty() {
+        menu.append(&MenuItem::with_id(app, "empty", none, false, None::<&str>)?)?;
+    } else {
+        let shown = 15usize;
+        for (id, name) in tasks.iter().take(shown) {
+            let item = MenuItem::with_id(
+                app,
+                format!("task:{}", id),
+                format!("•  {}", name),
+                true,
+                None::<&str>,
+            )?;
+            menu.append(&item)?;
+        }
+        if tasks.len() > shown {
+            menu.append(&MenuItem::with_id(
+                app,
+                "more",
+                format!("… +{} more", tasks.len() - shown),
+                false,
+                None::<&str>,
+            )?)?;
+        }
+    }
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, "open", open, true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "refresh", refresh, true, None::<&str>)?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&PredefinedMenuItem::quit(app, Some(quit))?)?;
+    Ok(menu)
+}
+
+fn show_tasks<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    let _ = app.emit("tray-open-tasks", ());
+}
+
+fn refresh_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let handle = app.clone();
+    let inner = app.clone();
+    let _ = handle.run_on_main_thread(move || {
+        if let Ok(menu) = build_tray_menu(&inner) {
+            if let Some(tray) = inner.tray_by_id("main-tray") {
+                let _ = tray.set_menu(Some(menu));
+                let count = get_pending_tasks_for_tray().len();
+                let (pending, ..) = tray_labels();
+                let _ = tray.set_tooltip(Some(format!("Dynamic Island · {}: {}", pending, count)));
+            }
+        }
+    });
+}
+
+fn on_tray_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: tauri::menu::MenuEvent) {
+    let id = event.id().as_ref().to_string();
+    match id.as_str() {
+        "open" => show_tasks(app),
+        "refresh" => refresh_tray(app),
+        _ => {
+            if let Some(task_id) = id.strip_prefix("task:") {
+                let _ = toggle_local_task(task_id.to_string());
+                refresh_tray(app);
+            }
+        }
+    }
+}
+
+fn build_tray<R: tauri::Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+    let handle = app.handle().clone();
+    let menu = build_tray_menu(&handle)?;
+
+    let count = get_pending_tasks_for_tray().len();
+    let (pending, ..) = tray_labels();
+
+    let mut builder = TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .tooltip(format!("Dynamic Island · {}: {}", pending, count))
+        .on_menu_event(|app, event| on_tray_menu(app, event))
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_tasks(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+
+    builder.build(app)?;
+    Ok(())
+}
+
+// Cập nhật icon khay khi danh sách tác vụ thay đổi | Refresh the tray icon when the task list changes
+fn start_tray_updater<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>) {
+    std::thread::spawn(move || {
+        let mut last_sig = String::from("<init>");
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(2));
+            let tasks = get_pending_tasks_for_tray();
+            let sig = tasks
+                .iter()
+                .map(|(id, name)| format!("{}:{}", id, name))
+                .collect::<Vec<_>>()
+                .join("|");
+            if sig != last_sig {
+                last_sig = sig;
+                refresh_tray(&app_handle);
+            }
+        }
+    });
+}
+
+#[tauri::command]
+fn set_ui_language<R: tauri::Runtime>(app: tauri::AppHandle<R>, language: String) {
+    let value = if language == "vi" { 1 } else { 0 };
+    TRAY_LANG.store(value, std::sync::atomic::Ordering::Relaxed);
+    refresh_tray(&app);
+}
+
+#[tauri::command]
+fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+#[derive(Clone, Serialize)]
+struct VolumeInfo {
+    level: i32,
+    muted: bool,
+}
+
+// Theo dõi âm lượng hệ thống (WASAPI) và phát sự kiện cho HUD | Watch the system volume (WASAPI) and emit events for the HUD
+fn start_volume_listener(app_handle: AppHandle) {
+    std::thread::spawn(move || {
+        use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+        use windows::Win32::Media::Audio::{
+            eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator,
+        };
+        use windows::Win32::System::Com::{
+            CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
+        };
+
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+
+            let enumerator: IMMDeviceEnumerator =
+                match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
+                    Ok(e) => e,
+                    Err(_) => return,
+                };
+            let device = match enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia) {
+                Ok(d) => d,
+                Err(_) => return,
+            };
+            let volume: IAudioEndpointVolume = match device.Activate(CLSCTX_ALL, None) {
+                Ok(v) => v,
+                Err(_) => return,
+            };
+
+            let mut last_level = -1.0f32;
+            let mut last_muted = false;
+            loop {
+                let level = volume.GetMasterVolumeLevelScalar().unwrap_or(0.0);
+                let muted = volume.GetMute().map(|b| b.as_bool()).unwrap_or(false);
+                if (level - last_level).abs() > 0.004 || muted != last_muted {
+                    last_level = level;
+                    last_muted = muted;
+                    let _ = app_handle.emit(
+                        "system-volume",
+                        VolumeInfo {
+                            level: (level * 100.0).round() as i32,
+                            muted,
+                        },
+                    );
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1570,6 +1946,16 @@ pub fn run() {
             
             // Start Bluetooth listener
             start_bluetooth_listener(handle.clone());
+
+            // Start Windows theme + accent color watcher
+            start_system_color_listener(handle.clone());
+
+            // Start system volume watcher (HUD)
+            start_volume_listener(handle.clone());
+
+            // System tray: persistent pending-tasks indicator
+            let _ = build_tray(app);
+            start_tray_updater(handle.clone());
 
             let handle_media = handle.clone();
             std::thread::spawn(move || {
@@ -1613,6 +1999,7 @@ pub fn run() {
             toggle_local_task,
             delete_local_task,
             update_local_task,
+            reorder_local_tasks,
             save_focus_session,
             get_focus_reports,
             get_local_task_stats,
@@ -1621,7 +2008,10 @@ pub fn run() {
             get_available_monitors,
             reposition_to_monitor,
             focus_window_by_name,
-            update_island_width
+            update_island_width,
+            get_system_colors,
+            set_ui_language,
+            read_text_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

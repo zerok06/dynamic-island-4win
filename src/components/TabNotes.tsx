@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, BarChart2, X, Circle, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, BarChart2, X, Circle, CheckCircle2, GripVertical } from 'lucide-react';
 import { TabNotesStats } from './TabNotesStats';
 import { getTranslation, Language } from '../utils/i18n';
 
@@ -25,6 +25,10 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
   const [showStats, setShowStats] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const dragIndexRef = React.useRef<number | null>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
 
   const isTauri = !!(window as any).__TAURI__;
 
@@ -68,7 +72,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
 
     // Check limit
     const activeCount = todos.filter((t) => !t.done).length;
-    if (activeCount >= 3) return;
+    if (activeCount >= 20) return;
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -134,7 +138,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
             const exists = next.some(t => t.name === updated.name && t.due_date === nextDateStr);
             if (!exists) {
               const activeCount = next.filter((t) => !t.done).length;
-              if (activeCount < 3) {
+              if (activeCount < 20) {
                 const recurringTask: LocalTask = {
                   id: `task_${crypto.randomUUID()}`,
                   name: updated.name,
@@ -198,6 +202,67 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
     setEditingId(null);
   };
 
+  const persistOrder = (ordered: LocalTask[]) => {
+    if (isTauri) {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        invoke('reorder_local_tasks', { orderedIds: ordered.map((t) => t.id) }).catch((err) => {
+          console.error('Failed to persist task order:', err);
+          fetchTodos();
+        });
+      });
+    } else {
+      localStorage.setItem('local_tasks_mock', JSON.stringify(ordered));
+    }
+  };
+
+  // Tính vị trí chèn dựa trên con trỏ so với tâm từng hàng | Compute the insertion index from the pointer position vs each row midpoint
+  const computeInsertIndex = (clientY: number): number => {
+    const container = listRef.current;
+    if (!container) return 0;
+    const rows = Array.from(container.children) as HTMLElement[];
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rows[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return rows.length;
+  };
+
+  const handlePointerDown = (index: number, e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    dragIndexRef.current = index;
+    setDragIndex(index);
+    setDropIndex(index);
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* noop */ }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragIndexRef.current === null) return;
+    const insert = computeInsertIndex(e.clientY);
+    setDropIndex(Math.min(insert, Math.max(0, todos.length - 1)));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const from = dragIndexRef.current;
+    dragIndexRef.current = null;
+    if (from === null) return;
+
+    const insertIndex = computeInsertIndex(e.clientY);
+    setDragIndex(null);
+    setDropIndex(null);
+
+    const next = [...todos];
+    const [moved] = next.splice(from, 1);
+    let at = insertIndex;
+    if (from < insertIndex) at = insertIndex - 1;
+    at = Math.max(0, Math.min(at, next.length));
+    if (at === from) return;
+
+    next.splice(at, 0, moved);
+    setTodos(next);
+    persistOrder(next);
+  };
+
   const formatTime = (unixS: number | null) => {
     if (!unixS) return '';
     const date = new Date(unixS * 1000);
@@ -212,20 +277,20 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
   };
 
   const activeTasks = todos.filter((t) => !t.done);
-  const limitReached = activeTasks.length >= 3;
+  const limitReached = activeTasks.length >= 20;
 
   if (showStats) {
     return <TabNotesStats onBack={() => setShowStats(false)} language={language} />;
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full max-h-[240px]">
+    <div className="flex flex-col gap-3 w-full max-h-[320px]">
       {/* Header with Stats Toggle */}
-      <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
-        <span className="text-[12px] font-black uppercase tracking-widest text-white/40">{t.tasksTitle}</span>
+      <div className="flex items-center justify-between border-b border-island/[0.04] pb-2">
+        <span className="text-[12px] font-black uppercase tracking-widest text-island/40">{t.tasksTitle}</span>
         <button
           onClick={() => setShowStats(true)}
-          className="px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/5"
+          className="px-2.5 py-1 rounded bg-island/[0.04] hover:bg-island/[0.08] text-island/60 hover:text-island transition-all text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-island/5"
         >
           <BarChart2 className="w-3.5 h-3.5 text-success-color" />
           {t.tasksStats}
@@ -233,21 +298,32 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
       </div>
 
       {/* List */}
-      <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar flex-grow pr-1">
-        {todos.map((todo) => {
+      <div ref={listRef} className="flex flex-col gap-2 overflow-y-auto custom-scrollbar flex-grow pr-1">
+        {todos.map((todo, index) => {
           const isDone = todo.done;
           return (
             <div
               key={todo.id}
-              className={`group flex items-center justify-between px-3 py-2 rounded-md transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              className={`group flex items-center justify-between px-3 py-2 rounded-md transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${dragIndex === index ? 'opacity-40 ' : ''}${dropIndex === index && dragIndex !== index ? 'ring-1 ring-inset ring-success-color ' : ''}${
                 editingId === todo.id
-                  ? 'bg-white/[0.02] border border-success-color border-dashed'
+                  ? 'bg-island/[0.02] border border-success-color border-dashed'
                   : isDone
-                  ? 'bg-white/[0.01] border border-white/[0.02] hover:bg-white/[0.04] opacity-60'
-                  : 'bg-white/[0.02] border border-white/[0.03] hover:bg-white/[0.06]'
+                  ? 'bg-island/[0.01] border border-island/[0.02] hover:bg-island/[0.04] opacity-60'
+                  : 'bg-island/[0.02] border border-island/[0.03] hover:bg-island/[0.06]'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div
+                  onPointerDown={(e) => handlePointerDown(index, e)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  style={{ touchAction: 'none' }}
+                  className="cursor-grab active:cursor-grabbing text-island/20 hover:text-island/60 transition-colors flex-shrink-0 -ml-1 select-none"
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="w-4 h-4" />
+                </div>
                 <button
                   onClick={() => toggleNote(todo.id)}
                   className="focus:outline-none transition-transform hover:scale-110 active:scale-95 flex-shrink-0"
@@ -255,7 +331,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
                   {isDone ? (
                     <CheckCircle2 className="w-[18px] h-[18px] text-success-color fill-success-color/10" />
                   ) : (
-                    <Circle className="w-[18px] h-[18px] text-white/30 hover:text-success-color hover:border-success-color" />
+                    <Circle className="w-[18px] h-[18px] text-island/30 hover:text-success-color hover:border-success-color" />
                   )}
                 </button>
                 {editingId === todo.id ? (
@@ -269,11 +345,11 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
                       if (e.key === 'Escape') setEditingId(null);
                     }}
                     autoFocus
-                    className="flex-grow bg-transparent border-none text-[13px] outline-none text-white w-full min-w-0 p-0"
+                    className="flex-grow bg-transparent border-none text-[13px] outline-none text-island w-full min-w-0 p-0"
                   />
                 ) : (
                   <span
-                    className={`text-[13px] truncate mr-2 cursor-pointer select-none ${isDone ? 'line-through text-text-secondary/60' : 'text-white/90 hover:text-white'}`}
+                    className={`text-[13px] truncate mr-2 cursor-pointer select-none ${isDone ? 'line-through text-text-secondary/60' : 'text-island/90 hover:text-island'}`}
                     onDoubleClick={() => {
                       if (!isDone) {
                         setEditingId(todo.id);
@@ -299,7 +375,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {isDone && todo.completed_at_unix_s && (
-                <span className="text-[10px] text-white/35 font-mono select-none" title="Completion time">
+                <span className="text-[10px] text-island/35 font-mono select-none" title="Completion time">
                   {formatTime(todo.completed_at_unix_s)}
                 </span>
               )}
@@ -320,7 +396,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
       <div className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
         limitReached
           ? 'bg-red-500/[0.02] border-red-500/20'
-          : 'bg-white/[0.02] border-white/[0.04] focus-within:border-success-color focus-within:border-dashed'
+          : 'bg-island/[0.02] border-island/[0.04] focus-within:border-success-color focus-within:border-dashed'
       }`}>
         <PlusCircle
           onClick={addNote}
@@ -338,13 +414,13 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
           disabled={limitReached}
           placeholder={limitReached ? t.tasksLimitReached : t.tasksPlaceholder}
           className={`flex-grow bg-transparent border-none text-[13px] outline-none transition-colors ${
-            limitReached ? 'text-red-400/60 placeholder-red-400/40' : 'text-white placeholder-text-secondary'
+            limitReached ? 'text-red-400/60 placeholder-red-400/40' : 'text-island placeholder-text-secondary'
           }`}
         />
         {!limitReached && (
-          <div className="flex items-center gap-1 text-[10px] text-white/30 font-medium select-none pr-1 flex-shrink-0">
+          <div className="flex items-center gap-1 text-[10px] text-island/30 font-medium select-none pr-1 flex-shrink-0">
             <span>↵ {t.tasksAdd}</span>
-            <span className="text-white/10 font-bold">·</span>
+            <span className="text-island/10 font-bold">·</span>
             <span>{t.tasksEsc}</span>
           </div>
         )}

@@ -1,7 +1,9 @@
 import React from 'react';
-import { Music, Timer, ListTodo, Inbox, Download, Bell } from 'lucide-react';
+import { Music, Timer, ListTodo, Inbox, Download, Bell, Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, CloudDrizzle, Volume2, VolumeX, CalendarClock } from 'lucide-react';
 import { BatteryState } from '../hooks/useBattery';
 import { Track } from '../hooks/useMedia';
+import { Weather } from '../hooks/useWeather';
+import { CalendarEvent } from '../hooks/useCalendar';
 import { getAppIcon } from '../utils/appIcons';
 
 interface CompactIslandProps {
@@ -22,8 +24,37 @@ interface CompactIslandProps {
   btStatus?: 'connected' | 'disconnected';
   systemNotif?: { appName: string; title: string; message: string; imagePath?: string } | null;
   unreadNotifsCount?: number;
+  weather?: Weather | null;
+  calendarEvent?: CalendarEvent | null;
+  volume?: { level: number; muted: boolean } | null;
+  effectsEnabled?: boolean;
   onNotificationIconClick?: () => void;
 }
+
+// Mapa de código meteorológico (Open-Meteo) a icono | Map Open-Meteo weather code to an icon
+const weatherIcon = (code: number) => {
+  if (code === 0) return <Sun className="w-4 h-4" />;
+  if (code <= 2) return <CloudSun className="w-4 h-4" />;
+  if (code === 3) return <Cloud className="w-4 h-4" />;
+  if (code === 45 || code === 48) return <CloudFog className="w-4 h-4" />;
+  if (code >= 51 && code <= 57) return <CloudDrizzle className="w-4 h-4" />;
+  if (code >= 61 && code <= 67) return <CloudRain className="w-4 h-4" />;
+  if (code >= 71 && code <= 77) return <CloudSnow className="w-4 h-4" />;
+  if (code >= 80 && code <= 82) return <CloudRain className="w-4 h-4" />;
+  if (code >= 85 && code <= 86) return <CloudSnow className="w-4 h-4" />;
+  if (code >= 95) return <CloudLightning className="w-4 h-4" />;
+  return <Cloud className="w-4 h-4" />;
+};
+
+const MiniEq: React.FC<{ color: string; playing: boolean }> = ({ color, playing }) => (
+  <div className={`mini-eq flex-shrink-0 ${playing ? 'is-playing' : ''}`} style={{ color: color || '#22d3ee' }}>
+    <span className="meq meq1 h-[4px]" />
+    <span className="meq meq2 h-[9px]" />
+    <span className="meq meq3 h-[6px]" />
+    <span className="meq meq4 h-[11px]" />
+    <span className="meq meq5 h-[3px]" />
+  </div>
+);
 
 export const CompactIsland: React.FC<CompactIslandProps> = ({
   currentSlot,
@@ -43,6 +74,10 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
   btStatus = 'connected',
   systemNotif = null,
   unreadNotifsCount = 0,
+  weather = null,
+  calendarEvent = null,
+  volume = null,
+  effectsEnabled = true,
   onNotificationIconClick,
 }) => {
   // Bao bọc bằng hiệu ứng trượt khi hiển thị thông báo tạm thời | Wrap content in slide transition for transient notifications
@@ -59,18 +94,19 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
         </div>
         <div className="flex flex-col text-left justify-center min-w-0">
           <span className="text-[10.5px] font-bold text-cyan-400 tracking-wide animate-pulse">Drag & Drop files...</span>
-          <span className="text-[9px] text-white/40 truncate">Stash files in Dynamic Island</span>
+          <span className="text-[9px] text-island/40 truncate">Stash files in Dynamic Island</span>
         </div>
       </div>
     );
   }
 
-  switch (currentSlot) {
+  const renderBody = () => {
+    switch (currentSlot) {
     case 'music':
       return wrap(
         <div className="flex items-center justify-between w-full px-0.5 max-w-full">
           {/* Phía bên trái: Đĩa nhạc xoay tròn chứa ảnh bìa album | Left side: Circular rotating album art icon */}
-          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-white/[0.03] border border-white/[0.05] flex-shrink-0 flex items-center justify-center">
+          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-island/[0.03] border border-island/[0.05] flex-shrink-0 flex items-center justify-center">
             {track.cover_url ? (
               <img
                 src={track.cover_url}
@@ -85,7 +121,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
           {/* Phía giữa: Tên bài hát (chỉ hiển thị khi hover) | Middle: Song Title (only visible when hovered) */}
           {isHovered && track.title && track.title !== 'Ready' && (
             <div className="flex flex-col justify-center min-w-0 mx-2 select-none flex-grow text-left animate-content-reveal">
-              <span className="text-[10px] font-semibold text-white truncate max-w-[480px]" title={track.title}>
+              <span className="text-[10px] font-semibold text-island truncate max-w-[480px]" title={track.title}>
                 {track.title}
               </span>
             </div>
@@ -114,7 +150,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
       return (
         <div className="flex items-center gap-2 text-accent-color">
           <ListTodo className="w-4 h-4" />
-          <span className="text-[12px] font-medium text-white whitespace-nowrap">
+          <span className="text-[12px] font-medium text-island whitespace-nowrap">
             {tasksCount} task{tasksCount !== 1 ? 's' : ''}
           </span>
         </div>
@@ -124,7 +160,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
       return (
         <div className="flex items-center gap-2 text-cyan-400">
           <Inbox className="w-4 h-4" />
-          <span className="text-[12px] font-medium text-white whitespace-nowrap">
+          <span className="text-[12px] font-medium text-island whitespace-nowrap">
             {filesCount} file{filesCount !== 1 ? 's' : ''}
           </span>
         </div>
@@ -142,10 +178,10 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
             </svg>
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-[11px] font-bold text-white/95 truncate max-w-[200px]">
+            <span className="text-[11px] font-bold text-island/95 truncate max-w-[200px]">
               {btStatus === 'connected' ? 'Bluetooth Connected' : 'Bluetooth Disconnected'}
             </span>
-            <span className="text-[9.5px] text-white/50 truncate max-w-[200px] mt-0.5">
+            <span className="text-[9.5px] text-island/50 truncate max-w-[200px] mt-0.5">
               {btDeviceName}
             </span>
           </div>
@@ -160,22 +196,22 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
           <div className="flex items-center justify-between w-full h-full gap-3 px-1">
             <div className="flex flex-col min-w-0 flex-grow justify-center leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                <span className="w-3.5 h-3.5 rounded-full bg-island/10 flex items-center justify-center flex-shrink-0">
                   {getAppIcon(systemNotif.appName, 9)}
                 </span>
-                <span className="text-[9px] font-bold text-white/50 truncate max-w-[120px]">
+                <span className="text-[9px] font-bold text-island/50 truncate max-w-[120px]">
                   {systemNotif.appName}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-white mt-1 truncate" title={systemNotif.title}>
+              <span className="text-[10px] font-bold text-island mt-1 truncate" title={systemNotif.title}>
                 {systemNotif.title}
               </span>
-              <span className="text-[8px] text-white/60 mt-0.5 line-clamp-2" title={systemNotif.message}>
+              <span className="text-[8px] text-island/60 mt-0.5 line-clamp-2" title={systemNotif.message}>
                 {systemNotif.message}
               </span>
             </div>
             
-            <div className="w-[85px] h-[55px] rounded-md overflow-hidden border border-white/[0.08] bg-white/[0.02] flex-shrink-0 flex items-center justify-center shadow-inner">
+            <div className="w-[85px] h-[55px] rounded-md overflow-hidden border border-island/[0.08] bg-island/[0.02] flex-shrink-0 flex items-center justify-center shadow-inner">
               <img
                 src={systemNotif.imagePath}
                 className="w-full h-full object-cover"
@@ -191,21 +227,64 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
 
       return wrap(
         <div className="flex items-center gap-2 px-1.5 min-w-0 max-w-full">
-          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-            {systemNotif ? getAppIcon(systemNotif.appName, 12) : <Bell className="w-3 h-3 text-white/75" />}
+          <div className="w-5 h-5 rounded-full bg-island/10 flex items-center justify-center flex-shrink-0">
+            {systemNotif ? getAppIcon(systemNotif.appName, 12) : <Bell className="w-3 h-3 text-island/75" />}
           </div>
           {systemNotif ? (
             <div className="flex flex-col leading-none min-w-0">
-              <span className="text-[10px] font-semibold text-white truncate max-w-[170px]" title={systemNotif.title}>
+              <span className="text-[10px] font-semibold text-island truncate max-w-[170px]" title={systemNotif.title}>
                 {systemNotif.title}
               </span>
-              <span className="text-[8.5px] text-white/45 truncate max-w-[170px] mt-0.5" title={systemNotif.message}>
+              <span className="text-[8.5px] text-island/45 truncate max-w-[170px] mt-0.5" title={systemNotif.message}>
                 {systemNotif.appName}: {systemNotif.message}
               </span>
             </div>
           ) : (
-            <span className="text-[10px] text-white/45">Notification</span>
+            <span className="text-[10px] text-island/45">Notification</span>
           )}
+        </div>
+      );
+
+    case 'weather':
+      return (
+        <div className="flex items-center gap-2 text-accent-color">
+          {weatherIcon(weather?.code ?? 0)}
+          <span className="text-[12px] font-semibold text-island whitespace-nowrap">
+            {weather ? `${weather.tempC}°` : '--'}
+          </span>
+        </div>
+      );
+
+    case 'calendar': {
+      const calTime = calendarEvent
+        ? calendarEvent.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '';
+      return (
+        <div className="flex items-center gap-2 text-warning-color min-w-0">
+          <CalendarClock className="w-4 h-4 flex-shrink-0" />
+          <div className="flex flex-col leading-none min-w-0">
+            <span className="text-[10px] font-semibold text-island truncate max-w-[150px]">
+              {calendarEvent?.summary}
+            </span>
+            <span className="text-[9px] text-island/50 mt-0.5">{calTime}</span>
+          </div>
+        </div>
+      );
+    }
+
+    case 'volume':
+      return (
+        <div className="flex items-center gap-2 text-accent-color w-full min-w-0">
+          {volume?.muted ? <VolumeX className="w-4 h-4 flex-shrink-0" /> : <Volume2 className="w-4 h-4 flex-shrink-0" />}
+          <span className="text-[11px] font-semibold text-island whitespace-nowrap">
+            {volume?.muted ? 'Muted' : `${volume?.level ?? 0}%`}
+          </span>
+          <div className="flex-1 h-[4px] rounded-full bg-island/10 overflow-hidden min-w-[36px]">
+            <div
+              className="h-full rounded-full bg-accent-color transition-[width] duration-150"
+              style={{ width: `${volume?.muted ? 0 : (volume?.level ?? 0)}%` }}
+            />
+          </div>
         </div>
       );
 
@@ -221,13 +300,13 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
         const strokeColor = isCharging
           ? '#4ade80'
           : isLow ? '#f87171'
-          : 'rgba(255,255,255,0.3)';
+          : 'rgb(var(--island-rgb) / 0.3)';
 
         const fillColor = isCharging
           ? '#4ade80'
           : isLow ? '#f87171'
           : isMid ? '#facc15'
-          : '#ffffff';
+          : 'rgb(var(--island-rgb))';
 
         const fillOpacity = isCharging ? '0.38' : isLow ? '0.9' : '0.55';
 
@@ -256,9 +335,9 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
             <div className="absolute left-0 top-0 w-[23px] h-[13px] flex items-center justify-center select-none">
               {(() => {
                 const isDarkText = isCharging || battery.level >= 30;
-                const textColorClass = isDarkText ? 'text-[#09090b]' : 'text-white';
+                const textColorClass = isDarkText ? 'text-island-surface' : 'text-island';
                 const textStyle = !isDarkText
-                  ? { textShadow: '0.6px 0.6px 0 #000, -0.6px 0.6px 0 #000, 0.6px -0.6px 0 #000, -0.6px -0.6px 0 #000, 0 0.8px 0.8px rgba(0,0,0,0.8)' }
+                  ? { textShadow: '0.6px 0.6px 0 rgb(var(--island-surface-rgb)), -0.6px 0.6px 0 rgb(var(--island-surface-rgb)), 0.6px -0.6px 0 rgb(var(--island-surface-rgb)), -0.6px -0.6px 0 rgb(var(--island-surface-rgb)), 0 0.8px 0.8px rgb(var(--island-surface-rgb) / 0.8)' }
                   : undefined;
                 return (
                   <span
@@ -277,21 +356,21 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
       if (!showBell) {
         // 1 icon -> Center battery icon + time string together in the middle
         return (
-          <div className="flex items-center justify-center gap-2 w-full text-white/60 hover:text-white transition-colors">
+          <div className="flex items-center justify-center gap-2 w-full text-island/60 hover:text-island transition-colors">
             {renderBattery()}
-            <span className="text-[12px] font-medium whitespace-nowrap text-white/90">{timeString}</span>
+            <span className="text-[12px] font-medium whitespace-nowrap text-island/90">{timeString}</span>
           </div>
         );
       }
 
       // 3 items -> Symmetrical layout (Battery left, Bell right, Time middle)
       return (
-        <div className="flex items-center justify-between w-full text-white/60 hover:text-white transition-colors px-0.5">
+        <div className="flex items-center justify-between w-full text-island/60 hover:text-island transition-colors px-0.5">
           <div className="flex items-center justify-start w-[28px] flex-shrink-0">
             {renderBattery()}
           </div>
 
-          <span className="text-[12px] font-medium whitespace-nowrap text-white/90">{timeString}</span>
+          <span className="text-[12px] font-medium whitespace-nowrap text-island/90">{timeString}</span>
 
           <div className="flex items-center justify-end w-[28px] flex-shrink-0">
             <div 
@@ -299,15 +378,24 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
                 e.stopPropagation();
                 if (onNotificationIconClick) onNotificationIconClick();
               }}
-              className="relative flex items-center justify-center cursor-pointer hover:text-white transition-colors"
+              className="relative flex items-center justify-center cursor-pointer hover:text-island transition-colors"
             >
-              <Bell className="w-3.5 h-3.5 text-white/50 animate-[bell-ring_1.5s_ease-in-out_infinite]" />
-              <span className="absolute -top-1 -right-1.5 min-w-[11px] h-[11px] px-0.5 rounded-full bg-[#ff3b30] text-white text-[7px] font-black flex items-center justify-center border border-[#09090b] leading-none">
+              <Bell className="w-3.5 h-3.5 text-island/50 animate-[bell-ring_1.5s_ease-in-out_infinite]" />
+              <span className="absolute -top-1 -right-1.5 min-w-[11px] h-[11px] px-0.5 rounded-full bg-[#ff3b30] text-island text-[7px] font-black flex items-center justify-center border border-island-surface leading-none">
                 {unreadNotifsCount}
               </span>
             </div>
           </div>
         </div>
       );
-  }
+    }
+  };
+
+  const showEq = !!effectsEnabled && localPlaying && currentSlot !== 'music' && currentSlot !== 'system-notification';
+  return (
+    <div className="flex items-center justify-center gap-2 w-full min-w-0">
+      <div className="flex items-center justify-center min-w-0 flex-1">{renderBody()}</div>
+      {showEq && <MiniEq color={dominantColor} playing={localPlaying} />}
+    </div>
+  );
 };

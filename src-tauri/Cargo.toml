@@ -18,17 +18,18 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-windows = { version = "0.52", features = ["Foundation", "Foundation_Collections", "Media_Control", "Storage_Streams", "UI_Notifications", "UI_Notifications_Management", "ApplicationModel", "Data_Xml_Dom", "Devices_Bluetooth", "Devices_Enumeration"] }
+windows = { version = "0.52", features = ["Foundation", "Foundation_Collections", "Media_Control", "Storage_Streams", "UI_Notifications", "UI_Notifications_Management", "ApplicationModel", "Data_Xml_Dom", "Devices_Bluetooth", "Devices_Enumeration", "UI_ViewManagement", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Foundation"] }
 base64 = { version = "0.22" }
 rusqlite = { version = "0.31", features = ["bundled"] }
 tauri-plugin-drag = "2"
+winreg = "0.55"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

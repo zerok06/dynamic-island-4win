@@ -79,15 +79,15 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
   return (
     <div className="flex flex-col gap-3.5 w-full max-h-[300px] select-none animate-content-reveal">
       {/* Header section with segmented filters & action buttons */}
-      <div className="flex items-center justify-between border-b border-white/[0.04] pb-2.5">
-        <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-lg border border-white/[0.02]">
+      <div className="flex items-center justify-between border-b border-island/[0.04] pb-2.5">
+        <div className="flex items-center gap-1 bg-island/[0.03] p-0.5 rounded-lg border border-island/[0.02]">
           {/* Unread tab filter */}
           <button
             onClick={() => setFilter('unread')}
             className={`px-3 py-1 rounded-md text-[10.5px] font-semibold transition-all duration-150 flex items-center gap-1.5
               ${filter === 'unread'
-                ? 'bg-white/[0.08] text-white shadow-sm'
-                : 'text-white/40 hover:text-white/70'
+                ? 'bg-island/[0.08] text-island shadow-sm'
+                : 'text-island/40 hover:text-island/70'
               }`}
           >
             {language === 'vi' ? 'Chưa đọc' : 'New'}
@@ -101,8 +101,8 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-md text-[10.5px] font-semibold transition-all duration-150
               ${filter === 'all'
-                ? 'bg-white/[0.08] text-white shadow-sm'
-                : 'text-white/40 hover:text-white/70'
+                ? 'bg-island/[0.08] text-island shadow-sm'
+                : 'text-island/40 hover:text-island/70'
               }`}
           >
             {language === 'vi' ? 'Lịch sử' : 'History'}
@@ -114,7 +114,7 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
           {unreadList.length > 0 && (
             <button
               onClick={onMarkAllAsRead}
-              className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/40 hover:text-white/80 transition-all duration-150"
+              className="p-1.5 rounded-md hover:bg-island/[0.04] text-island/40 hover:text-island/80 transition-all duration-150"
               title={language === 'vi' ? 'Đọc tất cả' : 'Mark all as read'}
             >
               <Check className="w-4 h-4" />
@@ -124,8 +124,8 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
           {/* Toggle chime sound */}
           <button
             onClick={() => onToggleSound(!soundEnabled)}
-            className={`p-1.5 rounded-md hover:bg-white/[0.04] transition-all duration-150
-              ${soundEnabled ? 'text-emerald-400/80 hover:text-emerald-400' : 'text-white/30 hover:text-white/60'}`}
+            className={`p-1.5 rounded-md hover:bg-island/[0.04] transition-all duration-150
+              ${soundEnabled ? 'text-emerald-400/80 hover:text-emerald-400' : 'text-island/30 hover:text-island/60'}`}
             title={t.notifSoundToggle}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -135,7 +135,7 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
           {history.length > 0 && (
             <button
               onClick={onClearAll}
-              className="p-1.5 rounded-md hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all duration-150"
+              className="p-1.5 rounded-md hover:bg-red-500/10 text-island/30 hover:text-red-400 transition-all duration-150"
               title={t.notifClearAll}
             >
               <Trash2 className="w-4 h-4" />
@@ -147,7 +147,7 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
       {/* Scrollable list of cards */}
       <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-grow pr-0.5" style={{ maxHeight: 250 }}>
         {displayedList.length === 0 ? (
-          <div className="text-center text-[11px] text-white/20 py-10 flex flex-col items-center gap-2">
+          <div className="text-center text-[11px] text-island/20 py-10 flex flex-col items-center gap-2">
             <Inbox className="w-6 h-6 opacity-20" />
             <span>
               {filter === 'unread'
@@ -156,23 +156,23 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
             </span>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-white/[0.03]">
+          <div className="flex flex-col divide-y divide-island/[0.03]">
             {displayedList.map((notif) => (
               <div
                 key={notif.id}
                 onClick={() => handleCardClick(notif)}
-                className={`group relative flex items-center justify-between py-2.5 transition-all duration-150 cursor-pointer px-1.5 hover:bg-white/[0.02] rounded-md
-                  ${!notif.read ? 'text-white' : 'text-white/50'}`}
+                className={`group relative flex items-center justify-between py-2.5 transition-all duration-150 cursor-pointer px-1.5 hover:bg-island/[0.02] rounded-md
+                  ${!notif.read ? 'text-island' : 'text-island/50'}`}
                 title={language === 'vi' ? `Nhấp để mở ${notif.appName}` : `Click to open ${notif.appName}`}
               >
                 <div className="flex items-start gap-3 min-w-0 flex-grow pr-12">
                   <div className="flex flex-col min-w-0 flex-grow leading-tight mt-0.5">
                     <div className="flex items-center gap-2">
                       <span className={`text-[9.5px] font-semibold truncate max-w-[150px]
-                        ${!notif.read ? 'text-white/80' : 'text-white/35'}`}>
+                        ${!notif.read ? 'text-island/80' : 'text-island/35'}`}>
                         {notif.appName}
                       </span>
-                      <span className="text-[8px] text-white/20 font-mono">
+                      <span className="text-[8px] text-island/20 font-mono">
                         {formatRelativeTime(notif.timestamp)}
                       </span>
                       {/* Red/Green Unread dot indicator */}
@@ -182,18 +182,18 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
                     </div>
                     
                     <span className={`text-[10px] font-medium truncate mt-1 transition-colors
-                      ${!notif.read ? 'text-white' : 'text-white/60'}`} title={notif.title}>
+                      ${!notif.read ? 'text-island' : 'text-island/60'}`} title={notif.title}>
                       {notif.title}
                     </span>
                     
                     <span className={`text-[8.5px] truncate mt-0.5 transition-colors
-                      ${!notif.read ? 'text-white/50' : 'text-white/30'}`} title={notif.message}>
+                      ${!notif.read ? 'text-island/50' : 'text-island/30'}`} title={notif.message}>
                       {notif.message}
                     </span>
                   </div>
 
                   {notif.imagePath && (
-                    <div className="w-[50px] h-[34px] rounded overflow-hidden border border-white/10 bg-white/[0.02] flex-shrink-0 flex items-center justify-center">
+                    <div className="w-[50px] h-[34px] rounded overflow-hidden border border-island/10 bg-island/[0.02] flex-shrink-0 flex items-center justify-center">
                       <img
                         src={notif.imagePath}
                         className="w-full h-full object-cover"
@@ -211,7 +211,7 @@ export const TabNotifications: React.FC<TabNotificationsProps> = ({
                         e.stopPropagation();
                         onMarkAsRead(notif.id);
                       }}
-                      className="p-1 rounded bg-white/[0.04] hover:bg-emerald-500/20 text-white/50 hover:text-emerald-400 transition-all border border-white/[0.04]"
+                      className="p-1 rounded bg-island/[0.04] hover:bg-emerald-500/20 text-island/50 hover:text-emerald-400 transition-all border border-island/[0.04]"
                       title={language === 'vi' ? 'Đánh dấu đã đọc' : 'Mark as read'}
                     >
                       <Check className="w-3.5 h-3.5" />

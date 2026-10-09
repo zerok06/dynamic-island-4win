@@ -5,6 +5,8 @@ import { useBattery } from './hooks/useBattery';
 import { useMedia } from './hooks/useMedia';
 import { useClickTracker } from './hooks/useClickTracker';
 import { useSettings } from './hooks/useSettings';
+import { useWeather } from './hooks/useWeather';
+import { useCalendar } from './hooks/useCalendar';
 
 import type { StashedFile } from './components/TabDrop';
 import type { StoredNotification } from './components/TabNotifications';
@@ -19,14 +21,51 @@ const TabNotifications = lazy(() => import('./components/TabNotifications').then
 
 const FIXED_WIDTH = 650; // Wide enough to accommodate all compact states and hovered music without resizing the Tauri window
 
+// Convierte un color CSS ("#rrggbb" o "rgb(r, g, b)") a "r g b" para usarlo con alpha en CSS | Convert a CSS color to "r g b" for CSS alpha usage
+const toRgbTriplet = (color: string): string => {
+  if (!color) return '255 255 255';
+  const m = color.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  if (m) return `${m[1]} ${m[2]} ${m[3]}`;
+  const hex = color.replace('#', '').trim();
+  if (hex.length === 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    if (![r, g, b].some(Number.isNaN)) return `${r} ${g} ${b}`;
+  }
+  return '255 255 255';
+};
+
+// Fallback de Suspense que informa al padre cuando una pestaña está cargando (para el aura) | Suspense fallback that reports tab loading to the parent (drives the aura)
+const TabLoadingFallback: React.FC<{ onLoadingChange: (loading: boolean) => void }> = ({ onLoadingChange }) => {
+  useEffect(() => {
+    onLoadingChange(true);
+    return () => onLoadingChange(false);
+  }, [onLoadingChange]);
+  return (
+    <div className="h-[120px] flex flex-col items-center justify-center gap-2 text-island/30 text-[10px] tracking-wider uppercase">
+      <span className="w-3.5 h-3.5 rounded-full border border-island/20 border-t-island/60 animate-spin" />
+      <span>Loading...</span>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   const { settings, setSettings } = useSettings();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tab-pomo' | 'tab-notes' | 'tab-music' | 'tab-drop' | 'tab-settings' | 'tab-notifications'>('tab-pomo');
+  const [activeTab, setActiveTab] = useState<'tab-pomo' | 'tab-notes' | 'tab-music' | 'tab-drop' | 'tab-settings' | 'tab-notifications'>('tab-notes');
   const [currentSlot, setCurrentSlot] = useState<string>('idle');
   const [timeString, setTimeString] = useState('00:00');
   const [tasksCount, setTasksCount] = useState(0);
   const [filesCount, setFilesCount] = useState(0);
+
+  // Estado de efectos/aura y Live Activities añadidas (volumen, carga)
+  const [accent, setAccent] = useState('#007aff');
+  const [appLoading, setAppLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [volume, setVolume] = useState<{ level: number; muted: boolean } | null>(null);
+  const volumeTimerRef = useRef<number | null>(null);
+  const volumeActive = settings.volumeHudEnabled && volume !== null;
 
   // Khe cắm thông báo tạm thời (notifSlot) - Ghi đè khe hiển thị hiện tại trong N giây rồi tự động trả về vị trí cũ
   const [notifSlot, setNotifSlot] = useState<string | null>(null);
@@ -47,19 +86,22 @@ export const App: React.FC = () => {
     }, duration);
   }, []);
 
-  // Xác định khe hiển thị cuối cùng trong chế độ thu nhỏ: Ưu tiên thông báo tạm thời trước
-  const displaySlot = notifSlot ?? currentSlot;
+  // Xác định khe hiển thị cuối cùng trong chế độ thu nhỏ | Determine the final compact slot (volume HUD has top priority, then transient notifications)
+  const displaySlot = volumeActive ? 'volume' : (notifSlot ?? currentSlot);
 
   // Ánh xạ nhanh giữa khe hiển thị (slot) và tab nội dung tương ứng để tự động chuyển tab khi click mở rộng đảo
   const slotToTabMap: Record<string, typeof activeTab> = {
-    idle: 'tab-pomo',
+    idle: 'tab-notes',
     music: 'tab-music',
     pomo: 'tab-pomo',
     tasks: 'tab-notes',
     files: 'tab-drop',
-    battery: 'tab-pomo',
+    battery: 'tab-notes',
     bluetooth: 'tab-settings',
     'system-notification': 'tab-notifications',
+    weather: 'tab-notes',
+    calendar: 'tab-notes',
+    volume: 'tab-notes',
   };
 
   const [btDeviceName, setBtDeviceName] = useState<string>('');
@@ -190,6 +232,30 @@ export const App: React.FC = () => {
   const battery = useBattery();
   const { track, localPlaying, dominantColor, timeline, togglePlay, skipNext, skipPrevious } = useMedia();
   const { clicks, incrementClicks } = useClickTracker();
+  const { weather, loading: weatherLoading } = useWeather(settings.weatherEnabled);
+  const calendarEvent = useCalendar(settings.calendarEnabled, settings.calendarSource);
+
+  // Aura de carga al arrancar + listener del HUD de volumen | Startup loading aura + system volume HUD listener
+  useEffect(() => {
+    const t = setTimeout(() => setAppLoading(false), 1400);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!(window as any).__TAURI__) return;
+    let unlisten: (() => void) | null = null;
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlisten = await listen<{ level: number; muted: boolean }>('system-volume', (event) => {
+        setVolume(event.payload);
+        if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+        volumeTimerRef.current = window.setTimeout(() => setVolume(null), 2000);
+      });
+    });
+    return () => {
+      if (unlisten) unlisten();
+      if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+    };
+  }, []);
 
   // Khai báo các biến tham chiếu để phát hiện sự thay đổi trạng thái và gửi thông báo
   const prevTrackTitleRef = useRef<string>('');
@@ -212,6 +278,71 @@ export const App: React.FC = () => {
     }
     prevChargingRef.current = battery.charging;
   }, [battery.charging, isExpanded]);
+
+  // Đồng bộ theme sáng/tối và màu nhấn của Windows theo thời gian thực | Follow Windows light/dark theme and accent color live
+  useEffect(() => {
+    const apply = (theme: string, accent: string) => {
+      document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+      if (accent) {
+        document.documentElement.style.setProperty('--accent', accent);
+        setAccent(accent);
+      }
+    };
+
+    const isTauri = !!(window as any).__TAURI__;
+    if (!isTauri) {
+      const mq = window.matchMedia('(prefers-color-scheme: light)');
+      apply(mq.matches ? 'light' : 'dark', '#007aff');
+      const handler = (e: MediaQueryListEvent) => apply(e.matches ? 'light' : 'dark', '#007aff');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+
+    let unlisten: (() => void) | null = null;
+    let disposed = false;
+    (async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const colors = await invoke<{ theme: string; accent: string }>('get_system_colors');
+        if (!disposed) apply(colors.theme, colors.accent);
+        const { listen } = await import('@tauri-apps/api/event');
+        const off = await listen<{ theme: string; accent: string }>('system-color-changed', (event) => {
+          apply(event.payload.theme, event.payload.accent);
+        });
+        if (disposed) off(); else unlisten = off;
+      } catch (e) {
+        console.error('Failed to init system colors:', e);
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  // Đồng bộ ngôn ngữ cho menu khay hệ thống | Sync the language used by the system tray menu
+  useEffect(() => {
+    if (!(window as any).__TAURI__) return;
+    import('@tauri-apps/api/core').then(({ invoke }) => {
+      invoke('set_ui_language', { language: settings.language }).catch(() => {});
+    });
+  }, [settings.language]);
+
+  // Mở nhanh tab tác vụ khi bấm icon khay | Open the tasks tab when the tray icon is clicked
+  useEffect(() => {
+    if (!(window as any).__TAURI__) return;
+    let unlisten: (() => void) | null = null;
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlisten = await listen('tray-open-tasks', () => {
+        setActiveTab('tab-notes');
+        setIsExpanded(true);
+      });
+    });
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   // Clock Update
   useEffect(() => {
@@ -447,6 +578,8 @@ export const App: React.FC = () => {
     if (pomoIsRunning || pomoSeconds < pomoTotalSeconds) active.push('pomo');
     if (tasksCount > 0) active.push('tasks');
     if (filesCount > 0) active.push('files');
+    if (settings.weatherEnabled && weather) active.push('weather');
+    if (settings.calendarEnabled && calendarEvent) active.push('calendar');
     return active;
   };
 
@@ -656,6 +789,11 @@ export const App: React.FC = () => {
     updateWindowSizeAndPosition();
   }, [isExpanded, contentHeight, isHovered, displaySlot, settings.expandedWidth, settings.selectedMonitor, track.title, windowHeightOverride]);
 
+  // Live Activities activas | Active Live Activities
+  const musicLive = localPlaying || (!!track.title && track.title !== 'Ready');
+  const pomoLive = pomoIsRunning || pomoSeconds < pomoTotalSeconds;
+  const isSplit = !isExpanded && musicLive && pomoLive;
+
   // Đồng bộ chiều rộng active của island lên backend để tối ưu hóa click-through | Sync the active width of the island to backend to optimize transparent click-through accuracy
   useEffect(() => {
     const isTauri = !!(window as any).__TAURI__;
@@ -663,31 +801,34 @@ export const App: React.FC = () => {
       const getActiveIslandWidth = () => {
         if (isExpanded) return settings.expandedWidth;
         if (isDragOver) return isHovered ? 170 : 150;
+        if (isSplit) return 260;
 
         switch (displaySlot) {
           case 'music':
-            return isHovered ? getDynamicMusicWidth() : 175;
+            return isHovered ? getDynamicMusicWidth() : 180;
           case 'system-notification': {
             const hasImg = !!(systemNotif && systemNotif.imagePath);
-            if (hasImg) {
-              return isHovered ? 330 : 310;
-            }
-            return isHovered ? 260 : 240;
+            if (hasImg) return 320;
+            return isHovered ? 270 : 250;
           }
           case 'bluetooth':
-            return isHovered ? 220 : 200;
+            return isHovered ? 230 : 210;
+          case 'calendar':
+            return isHovered ? 270 : 230;
+          case 'weather':
+          case 'volume':
+            return isHovered ? 150 : 130;
           case 'pomo':
           case 'tasks':
           case 'files':
           case 'battery':
-            return isHovered ? 130 : 100;
-          case 'idle':
-          default:
-            const unreadCount = notifHistory.filter((n) => !n.read).length;
-            if (unreadCount > 0) {
-              return isHovered ? 150 : 130;
-            }
             return isHovered ? 130 : 110;
+          case 'idle':
+          default: {
+            const unreadCount = notifHistory.filter((n) => !n.read).length;
+            if (unreadCount > 0) return isHovered ? 160 : 140;
+            return isHovered ? 140 : 120;
+          }
         }
       };
 
@@ -696,7 +837,7 @@ export const App: React.FC = () => {
         invoke('update_island_width', { width }).catch(() => {});
       });
     }
-  }, [isExpanded, isHovered, displaySlot, isDragOver, settings.expandedWidth, track.title, notifHistory, systemNotif]);
+  }, [isExpanded, isHovered, displaySlot, isDragOver, settings.expandedWidth, track.title, notifHistory, systemNotif, isSplit]);
 
   // Đồng bộ khe hiển thị khi nhạc bắt đầu phát hoặc dừng | Sync compact slot when music starts/stops
   useEffect(() => {
@@ -733,7 +874,7 @@ export const App: React.FC = () => {
       if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
       setNotifSlot(null);
 
-      setActiveTab(slotToTabMap[displaySlot] || 'tab-pomo');
+      setActiveTab(slotToTabMap[displaySlot] || 'tab-notes');
       setIsExpanded(true);
     }
   };
@@ -749,41 +890,87 @@ export const App: React.FC = () => {
     }
   };
 
+  // Aura por estado: notificación > carga > reproducción | State aura: notification > loading > playing
+  let auraState: 'none' | 'playing' | 'loading' | 'notification' = 'none';
+  let auraColor = '#ffffff';
+  if (notifSlot) {
+    auraState = 'notification';
+    auraColor = accent;
+  } else if (appLoading || tabLoading || weatherLoading) {
+    auraState = 'loading';
+    auraColor = accent;
+  } else if (localPlaying) {
+    auraState = 'playing';
+    auraColor = dominantColor;
+  }
+
   const getCompactWidthClass = () => {
-    if (isExpanded) return 'rounded-b-[12px] border-b border-x border-white/[0.08]';
+    if (isExpanded) return 'rounded-[18px] border border-island/[0.08]';
 
-    const baseCompact = 'h-[42px] hover:h-[46px] rounded-b-[8px] p-[0_6px] justify-center border-b border-x border-white/[0.04]';
+    const pill = 'h-[44px] hover:h-[48px] rounded-full px-4 justify-center border border-island/[0.06]';
 
-    if (isDragOver) return `w-[250px] h-[54px] rounded-b-[10px] p-[0_16px] justify-center border-b border-x border-white/[0.08]`;
+    if (isDragOver) return 'w-[260px] h-[56px] rounded-[28px] px-4 justify-center border border-island/[0.10]';
+    if (isSplit) return `w-[260px] ${pill}`;
 
     switch (displaySlot) {
       case 'music':
-        return `w-[175px] h-[42px] hover:h-[46px] rounded-b-[8px] p-[0_6px] justify-center border-b border-x border-white/[0.04]`;
+        return `w-[180px] h-[44px] hover:h-[48px] rounded-full px-3 justify-center border border-island/[0.06]`;
       case 'system-notification': {
         const hasImg = !!(systemNotif && systemNotif.imagePath);
         if (hasImg) {
-          return `w-[310px] hover:w-[330px] h-[75px] hover:h-[79px] rounded-b-[10px] p-[0_10px] justify-center border-b border-x border-white/[0.06]`;
+          return 'w-[320px] h-[80px] hover:h-[84px] rounded-[26px] px-3 justify-center border border-island/[0.08]';
         }
-        return `w-[240px] hover:w-[260px] h-[46px] hover:h-[50px] rounded-b-[8px] p-[0_12px] justify-center border-b border-x border-white/[0.04]`;
+        return `w-[250px] hover:w-[270px] ${pill}`;
       }
       case 'bluetooth':
-        return `w-[200px] hover:w-[220px] h-[46px] hover:h-[50px] rounded-b-[8px] p-[0_12px] justify-center border-b border-x border-white/[0.04]`;
+        return `w-[210px] hover:w-[230px] ${pill}`;
+      case 'calendar':
+        return `w-[230px] hover:w-[270px] ${pill}`;
+      case 'weather':
+      case 'volume':
+        return `w-[130px] hover:w-[150px] ${pill}`;
       case 'pomo':
       case 'tasks':
       case 'files':
       case 'battery':
-        return `w-[100px] hover:w-[130px] ${baseCompact}`;
+        return `w-[110px] hover:w-[130px] ${pill}`;
       case 'idle':
-      default:
+      default: {
         const unreadCount = notifHistory.filter((n) => !n.read).length;
         if (unreadCount > 0) {
-          return `w-[130px] hover:w-[150px] ${baseCompact}`;
+          return `w-[140px] hover:w-[160px] ${pill}`;
         }
-        return `w-[110px] hover:w-[130px] ${baseCompact}`;
+        return `w-[120px] hover:w-[140px] ${pill}`;
+      }
     }
   };
 
-
+  const compactBaseProps = {
+    clicks,
+    timeString,
+    battery,
+    track,
+    localPlaying,
+    dominantColor,
+    pomoTime: pomoTimeStr,
+    tasksCount,
+    filesCount,
+    isDragOver,
+    isHovered,
+    isNotif: !!notifSlot,
+    btDeviceName,
+    btStatus,
+    systemNotif,
+    weather,
+    calendarEvent,
+    volume,
+    effectsEnabled: settings.effectsEnabled,
+    unreadNotifsCount: notifHistory.filter((n) => !n.read).length,
+    onNotificationIconClick: () => {
+      setActiveTab('tab-notifications');
+      setIsExpanded(true);
+    },
+  };
 
   return (
     <div className="w-full h-full flex justify-center items-start bg-transparent select-none island-container">
@@ -805,9 +992,9 @@ export const App: React.FC = () => {
         onTransitionEnd={handleTransitionEnd}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`island-notch relative bg-[#09090b] text-white flex flex-col items-center justify-start transition-[width,height,border-radius,background-color] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none cursor-pointer ${getCompactWidthClass()} ${isDragOver ? 'island-drag-active' : ''} ${notifSlot ? 'animate-island-alert' : ''}`}
+        className={`relative bg-island-surface text-island flex flex-col items-center justify-start transition-[width,height,border-radius,background-color] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none cursor-pointer ${getCompactWidthClass()} ${isDragOver ? 'island-drag-active' : ''} ${notifSlot ? 'animate-island-alert' : ''} ${settings.effectsEnabled && auraState !== 'none' ? `island-aura island-aura--${auraState}` : ''}`}
         style={{
-          paddingTop: '8px',
+          paddingTop: isExpanded ? '8px' : '0px',
           height: isExpanded || isTransitioningToCompact ? `${contentHeight}px` : undefined,
           width: isExpanded
             ? `${settings.expandedWidth}px`
@@ -816,39 +1003,37 @@ export const App: React.FC = () => {
               : undefined,
           transitionDuration: `var(--anim-speed, 400ms)`,
           '--anim-speed': `${settings.animationSpeed}ms`,
-          '--island-radius': isExpanded ? '12px' : isDragOver ? '10px' : '8px',
+          '--aura-rgb': toRgbTriplet(auraColor),
         } as React.CSSProperties}
       >
         <div
-          className={`w-full flex-1 flex flex-col overflow-hidden ${isExpanded ? 'rounded-b-[12px] px-4 pt-[10px] pb-[16px]' : `rounded-b-[8px] ${isDragOver ? 'h-[46px]' : 'h-[34px] hover:h-[38px]'} p-[0_4px] justify-center`}`}
+          className={`w-full flex-1 flex flex-col overflow-hidden ${isExpanded ? 'rounded-[18px] px-4 pt-[10px] pb-[16px]' : 'justify-center'}`}
         >
           {/* COMPACT STATE VIEW */}
           {!isExpanded && (
-            <div className="w-full flex items-center justify-center h-full animate-compact-reveal">
-              <CompactIsland
-                currentSlot={displaySlot}
-                clicks={clicks}
-                timeString={timeString}
-                battery={battery}
-                track={track}
-                localPlaying={localPlaying}
-                dominantColor={dominantColor}
-                pomoTime={pomoTimeStr}
-                tasksCount={tasksCount}
-                filesCount={filesCount}
-                isDragOver={isDragOver}
-                isHovered={isHovered}
-                isNotif={!!notifSlot}
-                btDeviceName={btDeviceName}
-                btStatus={btStatus}
-                systemNotif={systemNotif}
-                unreadNotifsCount={notifHistory.filter((n) => !n.read).length}
-                onNotificationIconClick={() => {
-                  setActiveTab('tab-notifications');
-                  setIsExpanded(true);
-                }}
-              />
-            </div>
+            isSplit ? (
+              <div className="w-full flex items-center justify-center h-full gap-2 animate-compact-reveal">
+                <button
+                  className="flex items-center justify-center min-w-0 px-1 rounded-full hover:bg-island/[0.06] transition-colors focus:outline-none"
+                  onClick={(e) => { e.stopPropagation(); setActiveTab('tab-music'); setIsExpanded(true); }}
+                  title="Music"
+                >
+                  <CompactIsland currentSlot="music" {...compactBaseProps} />
+                </button>
+                <div className="w-[1px] h-5 bg-island/[0.12] flex-shrink-0" />
+                <button
+                  className="flex items-center justify-center min-w-0 px-1 rounded-full hover:bg-island/[0.06] transition-colors focus:outline-none"
+                  onClick={(e) => { e.stopPropagation(); setActiveTab('tab-pomo'); setIsExpanded(true); }}
+                  title="Pomodoro"
+                >
+                  <CompactIsland currentSlot="pomo" {...compactBaseProps} />
+                </button>
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-center h-full animate-compact-reveal">
+                <CompactIsland currentSlot={displaySlot} {...compactBaseProps} />
+              </div>
+            )
           )}
 
           {/* EXPANDED CONTENT VIEWS */}
@@ -859,10 +1044,19 @@ export const App: React.FC = () => {
             >
 
               {/* Navigation Tabs Bar */}
-              <div className="flex justify-center items-center gap-2 border-b border-white/[0.04] pb-2">
+              <div className="flex justify-center items-center gap-2 border-b border-island/[0.04] pb-2">
+                <button
+                  onClick={(e) => handleTabClick('tab-notes', e)}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-notes' ? 'bg-island/[0.06] text-success-color' : 'text-text-secondary hover:text-island'}`}
+                  title="Tasks"
+                >
+                  <ListTodo className="w-[18px] h-[18px]" />
+                  <span className={`absolute bottom-0.5 w-1 h-1 rounded-full bg-current transition-all duration-300 ${activeTab === 'tab-notes' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+                </button>
+
                 <button
                   onClick={(e) => handleTabClick('tab-pomo', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-pomo' ? 'bg-white/[0.06] text-warning-color' : 'text-text-secondary hover:text-white'}`}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-pomo' ? 'bg-island/[0.06] text-warning-color' : 'text-text-secondary hover:text-island'}`}
                   title="Pomodoro"
                 >
                   <Timer className="w-[18px] h-[18px]" />
@@ -870,17 +1064,8 @@ export const App: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={(e) => handleTabClick('tab-notes', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-notes' ? 'bg-white/[0.06] text-success-color' : 'text-text-secondary hover:text-white'}`}
-                  title="Notes"
-                >
-                  <ListTodo className="w-[18px] h-[18px]" />
-                  <span className={`absolute bottom-0.5 w-1 h-1 rounded-full bg-current transition-all duration-300 ${activeTab === 'tab-notes' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
-                </button>
-
-                <button
                   onClick={(e) => handleTabClick('tab-music', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-music' ? 'bg-white/[0.06] text-accent-color' : 'text-text-secondary hover:text-white'}`}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-music' ? 'bg-island/[0.06] text-accent-color' : 'text-text-secondary hover:text-island'}`}
                   title="Music"
                 >
                   <Music className="w-[18px] h-[18px]" />
@@ -889,7 +1074,7 @@ export const App: React.FC = () => {
 
                 <button
                   onClick={(e) => handleTabClick('tab-drop', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-drop' ? 'bg-white/[0.06] text-accent-color' : 'text-text-secondary hover:text-white'}`}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-drop' ? 'bg-island/[0.06] text-accent-color' : 'text-text-secondary hover:text-island'}`}
                   title="Stash Drop"
                 >
                   <Inbox className="w-[18px] h-[18px]" />
@@ -898,14 +1083,14 @@ export const App: React.FC = () => {
 
                 <button
                   onClick={(e) => handleTabClick('tab-notifications', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-notifications' ? 'bg-white/[0.06] text-warning-color' : 'text-text-secondary hover:text-white'}`}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-notifications' ? 'bg-island/[0.06] text-warning-color' : 'text-text-secondary hover:text-island'}`}
                   title="Notifications"
                 >
                   <Bell className="w-[18px] h-[18px]" />
                   {(() => {
                     const unreadCount = notifHistory.filter((n) => !n.read).length;
                     return unreadCount > 0 ? (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[8px] font-black flex items-center justify-center border border-[#09090b]">
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-island text-[8px] font-black flex items-center justify-center border border-island-surface">
                         {unreadCount}
                       </span>
                     ) : null;
@@ -913,10 +1098,10 @@ export const App: React.FC = () => {
                   <span className={`absolute bottom-0.5 w-1 h-1 rounded-full bg-current transition-all duration-300 ${activeTab === 'tab-notifications' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
                 </button>
 
-                <div className="w-[1px] h-4 bg-white/[0.04] mx-1"></div>
+                <div className="w-[1px] h-4 bg-island/[0.04] mx-1"></div>
                 <button
                   onClick={(e) => handleTabClick('tab-settings', e)}
-                  className={`relative p-2 rounded-md hover:bg-white/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-settings' ? 'bg-white/[0.06] text-accent-color' : 'text-text-secondary hover:text-white'}`}
+                  className={`relative p-2 rounded-md hover:bg-island/[0.06] transition-all duration-300 hover:scale-110 active:scale-95 flex flex-col items-center gap-0.5 ${activeTab === 'tab-settings' ? 'bg-island/[0.06] text-accent-color' : 'text-text-secondary hover:text-island'}`}
                   title="Settings"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -926,12 +1111,7 @@ export const App: React.FC = () => {
 
               {/* TAB CONTENTS */}
               <div className="w-full overflow-hidden">
-                <Suspense fallback={
-                  <div className="h-[120px] flex flex-col items-center justify-center gap-2 text-white/30 text-[10px] tracking-wider uppercase">
-                    <span className="w-3.5 h-3.5 rounded-full border border-white/20 border-t-white/60 animate-spin" />
-                    <span>Loading...</span>
-                  </div>
-                }>
+                <Suspense fallback={<TabLoadingFallback onLoadingChange={setTabLoading} />}>
                   {activeTab === 'tab-pomo' && (
                     <TabPomo
                       seconds={pomoSeconds}

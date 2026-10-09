@@ -95,7 +95,7 @@ const FileThumbnail: React.FC<{
 
   if (isImg && src) {
     return (
-      <div className="w-10 h-10 rounded-lg overflow-hidden relative border border-white/10">
+      <div className="w-10 h-10 rounded-lg overflow-hidden relative border border-island/10">
         <img
           src={src}
           alt={file.name}
@@ -280,10 +280,10 @@ export const TabDrop: React.FC<TabDropProps> = ({
       {/* ── File grid ── */}
       <div className="overflow-y-auto custom-scrollbar flex-grow pr-0.5" style={{ maxHeight: 260 }}>
         {stashedFiles.length === 0 ? (
-          <div className="text-center text-[12px] text-white/20 py-8 flex flex-col items-center gap-2">
+          <div className="text-center text-[12px] text-island/20 py-8 flex flex-col items-center gap-2">
             <UploadCloud className="w-8 h-8 opacity-20" />
             <span>{t.dropNoFiles}</span>
-            <span className="text-[10px] text-white/10">{t.dropDragFiles}</span>
+            <span className="text-[10px] text-island/10">{t.dropDragFiles}</span>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 pb-2">
@@ -299,8 +299,8 @@ export const TabDrop: React.FC<TabDropProps> = ({
                   onDoubleClick={() => handleOpenFile(file)}
                   onMouseDown={(e) => setupDragGesture(e, file, index)}
                   className={`group relative flex flex-col items-center justify-between p-2.5 rounded-xl border transition-all duration-200 cursor-grab aspect-square w-full
-                    bg-white/[0.025] border-white/[0.05]
-                    hover:bg-white/[0.055] hover:border-white/[0.12] hover:shadow-lg
+                    bg-island/[0.025] border-island/[0.05]
+                    hover:bg-island/[0.055] hover:border-island/[0.12] hover:shadow-lg
                     active:cursor-grabbing active:scale-95
                     ${isNew ? 'file-drop-in' : ''}`}
                   title={t.dropTooltipDrag}
@@ -317,7 +317,7 @@ export const TabDrop: React.FC<TabDropProps> = ({
                     {/* Preview Button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handlePreviewFile(file); }}
-                      className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/10 hover:!text-cyan-400 transition-all duration-150"
+                      className="p-1 rounded-md text-island/40 hover:text-island hover:bg-island/10 hover:!text-cyan-400 transition-all duration-150"
                       title="Quick Look"
                     >
                       <Eye className="w-3 h-3" />
@@ -325,7 +325,7 @@ export const TabDrop: React.FC<TabDropProps> = ({
                     {/* Delete button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); removeFile(index, file.path); }}
-                      className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/10 hover:!text-red-400 transition-all duration-150"
+                      className="p-1 rounded-md text-island/40 hover:text-island hover:bg-island/10 hover:!text-red-400 transition-all duration-150"
                       title={t.dropDeletePermanent}
                     >
                       <Trash2 className="w-3 h-3" />
@@ -339,10 +339,10 @@ export const TabDrop: React.FC<TabDropProps> = ({
 
                   {/* Info footer */}
                   <div className="w-full flex flex-col items-center gap-0.5 leading-none">
-                    <span className="text-[10px] text-white/80 font-medium truncate w-full text-center leading-tight px-0.5">
+                    <span className="text-[10px] text-island/80 font-medium truncate w-full text-center leading-tight px-0.5">
                       {file.name}
                     </span>
-                    <span className="text-[8.5px] text-white/30 font-mono tracking-wider">
+                    <span className="text-[8.5px] text-island/30 font-mono tracking-wider">
                       {formatBytes(file.size)}
                     </span>
                   </div>
@@ -355,15 +355,15 @@ export const TabDrop: React.FC<TabDropProps> = ({
 
       {/* ── Preview Modal Overlay ── */}
       {previewFile && (
-        <div className="absolute inset-0 z-30 bg-[#0c0c0e]/98 rounded-xl border border-white/[0.08] p-3 flex flex-col gap-2.5 animate-content-reveal">
+        <div className="absolute inset-0 z-30 bg-island-surface/98 rounded-xl border border-island/[0.08] p-3 flex flex-col gap-2.5 animate-content-reveal">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/[0.04] pb-1.5">
-            <span className="text-[11.5px] font-bold text-white/95 truncate max-w-[340px]" title={previewFile.name}>
+          <div className="flex items-center justify-between border-b border-island/[0.04] pb-1.5">
+            <span className="text-[11.5px] font-bold text-island/95 truncate max-w-[340px]" title={previewFile.name}>
               {previewFile.name}
             </span>
             <button
               onClick={() => { setPreviewFile(null); setPreviewContent(null); }}
-              className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              className="p-1 rounded-md text-island/40 hover:text-island hover:bg-island/5 transition-all"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -372,14 +372,14 @@ export const TabDrop: React.FC<TabDropProps> = ({
           {/* Body */}
           <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col justify-center items-center w-full">
             {loadingPreview ? (
-              <div className="flex flex-col items-center gap-2 text-white/40 text-xs">
+              <div className="flex flex-col items-center gap-2 text-island/40 text-xs">
                 <span className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                 <span>Loading preview...</span>
               </div>
             ) : previewError ? (
               <span className="text-red-400 text-xs text-center">{previewError}</span>
             ) : getCategory(getExt(previewFile.name)) === 'image' ? (
-              <div className="w-full h-[130px] flex items-center justify-center overflow-hidden rounded-lg border border-white/[0.05] bg-black/30">
+              <div className="w-full h-[130px] flex items-center justify-center overflow-hidden rounded-lg border border-island/[0.05] bg-island/[0.06]">
                 {previewImgSrc ? (
                   <img
                     src={previewImgSrc}
@@ -387,33 +387,33 @@ export const TabDrop: React.FC<TabDropProps> = ({
                     className="max-w-full max-h-full object-contain rounded"
                   />
                 ) : (
-                  <span className="text-white/20 text-[10px]">Loading Image...</span>
+                  <span className="text-island/20 text-[10px]">Loading Image...</span>
                 )}
               </div>
             ) : previewContent !== null ? (
-              <pre className="w-full text-left text-[10px] font-mono bg-black/40 p-2 rounded-lg border border-white/[0.05] overflow-auto h-[130px] text-white/80 whitespace-pre select-text custom-scrollbar">
+              <pre className="w-full text-left text-[10px] font-mono bg-island/[0.08] p-2 rounded-lg border border-island/[0.05] overflow-auto h-[130px] text-island/80 whitespace-pre select-text custom-scrollbar">
                 {previewContent}
               </pre>
             ) : (
               /* Non-previewable metadata card */
-              <div className="flex flex-col items-center gap-2 p-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01] w-full">
+              <div className="flex flex-col items-center gap-2 p-2.5 rounded-lg border border-island/[0.03] bg-island/[0.01] w-full">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${categoryMeta[getCategory(getExt(previewFile.name))].bg} ${categoryMeta[getCategory(getExt(previewFile.name))].border}`}>
                   <span className={categoryMeta[getCategory(getExt(previewFile.name))].color}>
                     {categoryMeta[getCategory(getExt(previewFile.name))].icon}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 w-full text-center">
-                  <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider">File Path</span>
-                  <span className="text-[9px] text-white/60 font-mono break-all select-all px-1.5 py-0.5 rounded bg-black/20 border border-white/[0.02]">{previewFile.path}</span>
+                  <span className="text-[9px] text-island/30 font-bold uppercase tracking-wider">File Path</span>
+                  <span className="text-[9px] text-island/60 font-mono break-all select-all px-1.5 py-0.5 rounded bg-island/[0.04] border border-island/[0.02]">{previewFile.path}</span>
                 </div>
-                <div className="flex justify-around w-full mt-1 border-t border-white/[0.04] pt-2">
+                <div className="flex justify-around w-full mt-1 border-t border-island/[0.04] pt-2">
                   <div className="flex flex-col items-center">
-                    <span className="text-[9px] text-white/30 font-bold uppercase">Size</span>
-                    <span className="text-[10px] text-white/80 font-mono font-bold">{formatBytes(previewFile.size)}</span>
+                    <span className="text-[9px] text-island/30 font-bold uppercase">Size</span>
+                    <span className="text-[10px] text-island/80 font-mono font-bold">{formatBytes(previewFile.size)}</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[9px] text-white/30 font-bold uppercase">Type</span>
-                    <span className="text-[10px] text-white/80 font-bold uppercase">{getExt(previewFile.name) || 'Unknown'}</span>
+                    <span className="text-[9px] text-island/30 font-bold uppercase">Type</span>
+                    <span className="text-[10px] text-island/80 font-bold uppercase">{getExt(previewFile.name) || 'Unknown'}</span>
                   </div>
                 </div>
               </div>

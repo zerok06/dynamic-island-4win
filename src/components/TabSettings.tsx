@@ -82,19 +82,19 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
   };
 
   return (
-    <div className="flex flex-col w-full text-[11.5px] text-white/80 animate-content-reveal p-1 divide-y divide-white/[0.04] select-none">
+    <div className="flex flex-col w-full text-[11.5px] text-island/80 animate-content-reveal p-1 divide-y divide-island/[0.04] select-none">
       
       {/* 1. MONITOR SELECTION */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">{t.displayMonitor}</span>
+        <span className="font-medium text-island/50">{t.displayMonitor}</span>
         <select
           value={settings.selectedMonitor}
           onChange={handleMonitorChange}
-          className="py-1 px-1.5 bg-white/[0.03] border border-white/[0.06] rounded text-white/80 text-[10.5px] focus:outline-none max-w-[170px]"
+          className="py-1 px-1.5 bg-island/[0.03] border border-island/[0.06] rounded text-island/80 text-[10.5px] focus:outline-none max-w-[170px]"
         >
-          <option value="" className="bg-[#09090b]">{t.primaryMonitor}</option>
+          <option value="" className="bg-island-surface">{t.primaryMonitor}</option>
           {monitors.map((mon) => (
-            <option key={mon.name} value={mon.name} className="bg-[#09090b]">
+            <option key={mon.name} value={mon.name} className="bg-island-surface">
               {mon.name.replace('\\\\.\\', '')} ({mon.width}x{mon.height})
             </option>
           ))}
@@ -104,17 +104,17 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
       {/* 2. AUTOSTART */}
       <div className="flex items-center justify-between py-2.5">
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-white/50">{t.startOnBoot}</span>
+          <span className="font-medium text-island/50">{t.startOnBoot}</span>
         </div>
         <button
           onClick={handleAutostartToggle}
           disabled={!autostartSupported}
           className={`w-7 h-4 rounded-full p-[2px] transition-colors duration-300 focus:outline-none ${
-            settings.startOnBoot ? 'bg-white/80' : 'bg-white/10'
+            settings.startOnBoot ? 'bg-island/80' : 'bg-island/10'
           } ${!autostartSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
         >
           <div
-            className={`w-[12px] h-[12px] rounded-full bg-[#09090b] shadow transform transition-transform duration-300 ${
+            className={`w-[12px] h-[12px] rounded-full bg-island-surface shadow transform transition-transform duration-300 ${
               settings.startOnBoot ? 'translate-x-[11px]' : 'translate-x-0'
             }`}
           />
@@ -123,8 +123,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
 
       {/* 3. ANIMATION SPEED */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">{t.animationSpeed}</span>
-        <div className="flex bg-white/[0.02] border border-white/[0.05] rounded p-[1.5px] gap-[1px]">
+        <span className="font-medium text-island/50">{t.animationSpeed}</span>
+        <div className="flex bg-island/[0.02] border border-island/[0.05] rounded p-[1.5px] gap-[1px]">
           {([
             { label: t.animFast, value: 400 },
             { label: t.animSmooth, value: 600 },
@@ -135,8 +135,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
               onClick={() => onSettingsChange({ animationSpeed: opt.value })}
               className={`px-2 py-0.5 rounded-[2px] text-[10px] transition-colors ${
                 settings.animationSpeed === opt.value 
-                  ? 'bg-white/15 text-white font-medium' 
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'bg-island/15 text-island font-medium' 
+                  : 'text-island/40 hover:text-island/70'
               }`}
             >
               {opt.label}
@@ -147,8 +147,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
 
       {/* 4. ISLAND WIDTH */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">{t.islandWidth}</span>
-        <div className="flex bg-white/[0.02] border border-white/[0.05] rounded p-[1.5px] gap-[1px]">
+        <span className="font-medium text-island/50">{t.islandWidth}</span>
+        <div className="flex bg-island/[0.02] border border-island/[0.05] rounded p-[1.5px] gap-[1px]">
           {([
             { label: t.widthNarrow, value: 380 },
             { label: t.widthNormal, value: 420 },
@@ -159,8 +159,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
               onClick={() => onSettingsChange({ expandedWidth: opt.value })}
               className={`px-2 py-0.5 rounded-[2px] text-[10px] transition-colors ${
                 settings.expandedWidth === opt.value 
-                  ? 'bg-white/15 text-white font-medium' 
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'bg-island/15 text-island font-medium' 
+                  : 'text-island/40 hover:text-island/70'
               }`}
             >
               {opt.label}
@@ -171,8 +171,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
 
       {/* 5. HEIGHT MULTIPLIER */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">{t.heightScale}</span>
-        <div className="flex bg-white/[0.02] border border-white/[0.05] rounded p-[1.5px] gap-[1px]">
+        <span className="font-medium text-island/50">{t.heightScale}</span>
+        <div className="flex bg-island/[0.02] border border-island/[0.05] rounded p-[1.5px] gap-[1px]">
           {([
             { label: t.heightSmall, value: 0.9 },
             { label: t.heightNormal, value: 1.0 },
@@ -183,8 +183,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
               onClick={() => onSettingsChange({ heightMultiplier: opt.value })}
               className={`px-2 py-0.5 rounded-[2px] text-[10px] transition-colors ${
                 settings.heightMultiplier === opt.value 
-                  ? 'bg-white/15 text-white font-medium' 
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'bg-island/15 text-island font-medium' 
+                  : 'text-island/40 hover:text-island/70'
               }`}
             >
               {opt.label}
@@ -195,8 +195,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
 
       {/* 6. LANGUAGE SELECTION */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">{t.language}</span>
-        <div className="flex bg-white/[0.02] border border-white/[0.05] rounded p-[1.5px] gap-[1px]">
+        <span className="font-medium text-island/50">{t.language}</span>
+        <div className="flex bg-island/[0.02] border border-island/[0.05] rounded p-[1.5px] gap-[1px]">
           {([
             { label: 'English', value: 'en' },
             { label: 'Tiếng Việt', value: 'vi' }
@@ -206,8 +206,8 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
               onClick={() => onSettingsChange({ language: opt.value })}
               className={`px-2 py-0.5 rounded-[2px] text-[10px] transition-colors ${
                 settings.language === opt.value 
-                  ? 'bg-white/15 text-white font-medium' 
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'bg-island/15 text-island font-medium' 
+                  : 'text-island/40 hover:text-island/70'
               }`}
             >
               {opt.label}
@@ -216,9 +216,45 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ settings, onSettingsCh
         </div>
       </div>
 
+      {/* LIVE ACTIVITY / EFFECT TOGGLES */}
+      {([
+        { label: t.effectsLabel, key: 'effectsEnabled' as const },
+        { label: t.weatherLabel, key: 'weatherEnabled' as const },
+        { label: t.volumeHudLabel, key: 'volumeHudEnabled' as const },
+        { label: t.calendarLabel, key: 'calendarEnabled' as const },
+      ]).map((row) => (
+        <div key={row.key} className="flex items-center justify-between py-2.5">
+          <span className="font-medium text-island/50">{row.label}</span>
+          <button
+            onClick={() => onSettingsChange({ [row.key]: !settings[row.key] } as any)}
+            className={`w-7 h-4 rounded-full p-[2px] transition-colors duration-300 focus:outline-none ${
+              settings[row.key] ? 'bg-island/80' : 'bg-island/10'
+            }`}
+          >
+            <div
+              className={`w-[12px] h-[12px] rounded-full bg-island-surface shadow transform transition-transform duration-300 ${
+                settings[row.key] ? 'translate-x-[11px]' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      ))}
+
+      {/* CALENDAR SOURCE */}
+      <div className="flex items-center justify-between py-2.5 gap-3">
+        <span className="font-medium text-island/50 flex-shrink-0">{t.calendarLabel}</span>
+        <input
+          type="text"
+          value={settings.calendarSource}
+          onChange={(e) => onSettingsChange({ calendarSource: e.target.value })}
+          placeholder={t.calendarSourcePlaceholder}
+          className="flex-1 min-w-0 py-1 px-1.5 bg-island/[0.03] border border-island/[0.06] rounded text-island/80 text-[10.5px] focus:outline-none"
+        />
+      </div>
+
       {/* 7. RESET POSITION */}
       <div className="flex items-center justify-between py-2.5">
-        <span className="font-medium text-white/50">
+        <span className="font-medium text-island/50">
           {t.offsetAlignment}
         </span>
         <button

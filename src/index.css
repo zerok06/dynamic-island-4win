@@ -3,6 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Dark (default): foreground/overlays are white; surface is near-black */
+    --island-rgb: 255 255 255;
+    --island-surface-rgb: 9 9 11;
+    --accent: #007aff;
+    color-scheme: dark;
+  }
+  :root[data-theme='light'] {
+    /* Light: foreground/overlays become near-black; surface becomes light */
+    --island-rgb: 9 9 11;
+    --island-surface-rgb: 244 244 245;
+    color-scheme: light;
+  }
   html, body {
     margin: 0;
     padding: 0;
@@ -10,11 +23,10 @@
     height: 100%;
     user-select: none;
     -webkit-font-smoothing: antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: transparent !important;
     border: none !important;
     outline: none !important;
-    color-scheme: dark;
   }
   #root {
     width: 100%;
@@ -22,7 +34,6 @@
     background-color: transparent !important;
     border: none !important;
     outline: none !important;
-    color-scheme: dark;
   }
   button, button:focus, button:focus-visible, button:active {
     outline: none !important;
@@ -31,31 +42,55 @@
   }
 }
 
-/* Custom styles for floating island */
+/* Custom styles for floating island (iOS-style capsule) */
 .island-container {
-  padding-top: 4px;
+  padding-top: 14px;
 }
 
-.island-notch::before,
-.island-notch::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  width: var(--island-radius, 8px);
-  height: var(--island-radius, 8px);
-  background: transparent;
-  pointer-events: none;
-  transition: all var(--anim-speed, 0.4s) cubic-bezier(0.16, 1, 0.3, 1);
+/* ── State aura (iOS-like glow around the suspended island) ───────────── */
+.island-aura {
+  --aura-rgb: 255 255 255;
+}
+@keyframes auraPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.18), 0 0 14px 1px rgb(var(--aura-rgb) / 0.16); }
+  50%      { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.45), 0 0 26px 5px rgb(var(--aura-rgb) / 0.40); }
+}
+.island-aura--playing {
+  animation: auraPulse 2.6s ease-in-out infinite;
+}
+@keyframes auraShimmer {
+  0%   { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.12), 0 0 10px 1px rgb(var(--aura-rgb) / 0.14); }
+  50%  { box-shadow: 0 0 0 2px rgb(var(--aura-rgb) / 0.55), 0 0 24px 6px rgb(var(--aura-rgb) / 0.45); }
+  100% { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.12), 0 0 10px 1px rgb(var(--aura-rgb) / 0.14); }
+}
+.island-aura--loading {
+  animation: auraShimmer 1.1s ease-in-out infinite;
+}
+@keyframes auraFlash {
+  0%   { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.0), 0 0 0 0 rgb(var(--aura-rgb) / 0.0); }
+  25%  { box-shadow: 0 0 0 2px rgb(var(--aura-rgb) / 0.9), 0 0 30px 9px rgb(var(--aura-rgb) / 0.6); }
+  100% { box-shadow: 0 0 0 1px rgb(var(--aura-rgb) / 0.0), 0 0 0 0 rgb(var(--aura-rgb) / 0.0); }
+}
+.island-aura--notification {
+  animation: auraFlash 0.9s ease-out 1;
 }
 
-.island-notch::before {
-  left: calc(-1 * var(--island-radius, 8px));
-  background: radial-gradient(circle at bottom left, transparent var(--island-radius, 8px), #09090b var(--island-radius, 8px));
+/* ── Persistent mini equalizer (shown whenever music is playing) ───────── */
+.mini-eq { display: flex; align-items: center; gap: 2px; height: 14px; }
+.mini-eq .meq {
+  width: 2.5px;
+  border-radius: 9999px;
+  background-color: currentColor;
+  transform-origin: center;
 }
-
-.island-notch::after {
-  right: calc(-1 * var(--island-radius, 8px));
-  background: radial-gradient(circle at bottom right, transparent var(--island-radius, 8px), #09090b var(--island-radius, 8px));
+.mini-eq.is-playing .meq1 { animation: meq-bounce 0.8s ease-in-out infinite alternate; }
+.mini-eq.is-playing .meq2 { animation: meq-bounce 1.1s ease-in-out infinite alternate; }
+.mini-eq.is-playing .meq3 { animation: meq-bounce 0.9s ease-in-out infinite alternate; }
+.mini-eq.is-playing .meq4 { animation: meq-bounce 1.3s ease-in-out infinite alternate; }
+.mini-eq.is-playing .meq5 { animation: meq-bounce 0.7s ease-in-out infinite alternate; }
+@keyframes meq-bounce {
+  0%   { height: 3px; }
+  100% { height: 14px; }
 }
 
 /* Custom Scrollbar for Notes */
@@ -66,7 +101,7 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--island-rgb) / 0.1);
   border-radius: 2px;
 }
 

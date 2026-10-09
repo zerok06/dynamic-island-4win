@@ -66,11 +66,11 @@ export const TabPomo: React.FC<TabPomoProps> = ({
   return (
     <div className="flex flex-col items-center gap-3.5 w-full">
       {/* Header with Stats Toggle */}
-      <div className="flex items-center justify-between border-b border-white/[0.04] pb-2 w-full">
-        <span className="text-[12px] font-black uppercase tracking-widest text-white/40">{t.pomoTitle}</span>
+      <div className="flex items-center justify-between border-b border-island/[0.04] pb-2 w-full">
+        <span className="text-[12px] font-black uppercase tracking-widest text-island/40">{t.pomoTitle}</span>
         <button
           onClick={() => setShowReport(true)}
-          className="px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/5"
+          className="px-2.5 py-1 rounded bg-island/[0.04] hover:bg-island/[0.08] text-island/60 hover:text-island transition-all text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-island/5"
         >
           <BarChart2 className="w-3.5 h-3.5 text-warning-color" />
           {t.pomoReport}
@@ -78,7 +78,7 @@ export const TabPomo: React.FC<TabPomoProps> = ({
       </div>
 
       {/* Preset Selectors */}
-      <div className="flex items-center gap-1.5 p-1 bg-white/[0.02] border border-white/[0.05] rounded-xl shadow-inner w-full justify-between">
+      <div className="flex items-center gap-1.5 p-1 bg-island/[0.02] border border-island/[0.05] rounded-xl shadow-inner w-full justify-between">
         {PRESETS.map((p) => {
           const isActive = totalSeconds === p.seconds;
           return (
@@ -89,7 +89,7 @@ export const TabPomo: React.FC<TabPomoProps> = ({
               className={`flex-1 py-1.5 text-[12px] font-bold rounded-lg transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 isActive
                   ? 'bg-gradient-to-r from-warning-color to-orange-500 text-black shadow-md shadow-orange-500/10 scale-[1.02]'
-                  : 'text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent'
+                  : 'text-island/60 hover:text-island hover:bg-island/5 disabled:opacity-30 disabled:hover:bg-transparent'
               }`}
             >
               {p.label}
@@ -121,7 +121,7 @@ export const TabPomo: React.FC<TabPomoProps> = ({
             cx="68"
             cy="68"
             r="52"
-            className="stroke-white/5 fill-none"
+            className="stroke-island/5 fill-none"
             strokeWidth="4"
           />
           <circle
@@ -138,12 +138,12 @@ export const TabPomo: React.FC<TabPomoProps> = ({
         </svg>
 
         <div className="flex flex-col items-center z-10">
-          <span className="text-[34px] font-mono font-bold text-white tracking-tight leading-none">
+          <span className="text-[34px] font-mono font-bold text-island tracking-tight leading-none">
             {timeString}
           </span>
           <span
             className={`text-[9px] uppercase tracking-[0.2em] mt-2 font-black transition-colors ${
-              isRunning ? 'text-warning-color animate-pulse' : 'text-white/40'
+              isRunning ? 'text-warning-color animate-pulse' : 'text-island/40'
             }`}
           >
             {isRunning ? t.pomoFocusing : seconds === 0 ? t.pomoDone : t.pomoPaused}
@@ -155,7 +155,7 @@ export const TabPomo: React.FC<TabPomoProps> = ({
       <div className="flex items-center gap-4 w-full justify-center">
         <button
           onClick={resetTimer}
-          className="flex-1 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] text-white/80 hover:text-white transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-102 active:scale-98 flex items-center justify-center gap-1.5"
+          className="flex-1 py-2 rounded-lg bg-island/[0.02] border border-island/[0.05] hover:bg-island/[0.06] hover:border-island/[0.1] text-island/80 hover:text-island transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-102 active:scale-98 flex items-center justify-center gap-1.5"
           title={t.pomoReset}
         >
           <RotateCcw className="w-4 h-4" />

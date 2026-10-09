@@ -69,10 +69,10 @@ export const TabPomoReport: React.FC<TabPomoReportProps> = ({ onBack, language }
   return (
     <div className="flex flex-col gap-3.5 py-0.5 animate-content-reveal">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
+      <div className="flex items-center justify-between border-b border-island/[0.04] pb-2">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[13px] font-bold text-white/50 hover:text-white transition-all hover:-translate-x-0.5"
+          className="flex items-center gap-1.5 text-[13px] font-bold text-island/50 hover:text-island transition-all hover:-translate-x-0.5"
         >
           <ChevronLeft className="w-[18px] h-[18px]" />
           {t.pomoTimer}
@@ -86,38 +86,38 @@ export const TabPomoReport: React.FC<TabPomoReportProps> = ({ onBack, language }
 
       {/* Grid Stats */}
       <div className="grid grid-cols-2 gap-2.5 mt-0.5">
-        <div className="relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.05] rounded-2xl p-3.5 flex flex-col gap-1.5">
-          <span className="text-[11px] text-white/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
+        <div className="relative overflow-hidden bg-gradient-to-b from-island/[0.03] to-transparent border border-island/[0.05] rounded-2xl p-3.5 flex flex-col gap-1.5">
+          <span className="text-[11px] text-island/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-warning-color" />
             {t.pomoToday}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-2xl font-bold font-mono text-white leading-none">{report.today_minutes}</span>
-            <span className="text-[12px] text-white/40 font-bold">m</span>
+            <span className="text-2xl font-bold font-mono text-island leading-none">{report.today_minutes}</span>
+            <span className="text-[12px] text-island/40 font-bold">m</span>
           </div>
-          <span className="text-[11px] text-white/30 font-medium mt-0.5">
+          <span className="text-[11px] text-island/30 font-medium mt-0.5">
             {report.today_sessions} {report.today_sessions === 1 ? t.pomoSession : t.pomoSessions}
           </span>
         </div>
 
-        <div className="relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.05] rounded-2xl p-3.5 flex flex-col gap-1.5">
-          <span className="text-[11px] text-white/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
+        <div className="relative overflow-hidden bg-gradient-to-b from-island/[0.03] to-transparent border border-island/[0.05] rounded-2xl p-3.5 flex flex-col gap-1.5">
+          <span className="text-[11px] text-island/40 tracking-wider uppercase font-bold flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-warning-color" />
             {t.pomo7Days}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-2xl font-bold font-mono text-white leading-none">{report.week_minutes}</span>
-            <span className="text-[12px] text-white/40 font-bold">m</span>
+            <span className="text-2xl font-bold font-mono text-island leading-none">{report.week_minutes}</span>
+            <span className="text-[12px] text-island/40 font-bold">m</span>
           </div>
-          <span className="text-[11px] text-white/30 font-medium mt-0.5">
+          <span className="text-[11px] text-island/30 font-medium mt-0.5">
             {report.week_sessions} {report.week_sessions === 1 ? t.pomoSession : t.pomoSessions}
           </span>
         </div>
       </div>
 
       {/* Distribution */}
-      <div className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-3.5 flex flex-col gap-3 mt-0.5">
-        <span className="text-[11px] text-white/40 tracking-wider uppercase font-bold">
+      <div className="bg-island/[0.02] border border-island/[0.04] rounded-2xl p-3.5 flex flex-col gap-3 mt-0.5">
+        <span className="text-[11px] text-island/40 tracking-wider uppercase font-bold">
           {t.pomoBreakdown}
         </span>
         <div className="flex flex-col gap-2.5">
@@ -128,14 +128,14 @@ export const TabPomoReport: React.FC<TabPomoReportProps> = ({ onBack, language }
 
             return (
               <div key={dur} className="flex items-center gap-3">
-                <span className="text-[12px] font-mono font-bold text-white/60 w-8">{dur}m</span>
-                <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                <span className="text-[12px] font-mono font-bold text-island/60 w-8">{dur}m</span>
+                <div className="flex-1 h-1.5 bg-island/[0.04] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-warning-color to-red-400 rounded-full transition-all duration-500"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
-                <span className="text-[12px] font-mono font-bold text-white/80 w-12 text-right">
+                <span className="text-[12px] font-mono font-bold text-island/80 w-12 text-right">
                   {count}x
                 </span>
               </div>

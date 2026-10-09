@@ -41,13 +41,13 @@ export const TabApps: React.FC = () => {
       {apps.map((app) => (
         <div
           key={app.name}
-          className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:bg-white/[0.04] transition-colors"
+          className="flex items-center justify-between p-3 rounded-lg bg-island/[0.02] border border-island/[0.03] hover:bg-island/[0.04] transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className={`p-2 rounded-md ${app.colorClass}`}>
               {app.icon}
             </div>
-            <span className="text-[13px] font-semibold text-white/95">{app.name}</span>
+            <span className="text-[13px] font-semibold text-island/95">{app.name}</span>
           </div>
           <span className="flex items-center gap-1 text-[11px] text-success-color font-medium bg-success-color/10 px-2 py-0.5 rounded-full">
             <CircleDot className="w-2 h-2" />
