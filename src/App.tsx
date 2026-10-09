@@ -805,7 +805,7 @@ export const App: React.FC = () => {
 
         switch (displaySlot) {
           case 'music':
-            return isHovered ? getDynamicMusicWidth() : 180;
+            return isHovered ? getDynamicMusicWidth() : 184;
           case 'system-notification': {
             const hasImg = !!(systemNotif && systemNotif.imagePath);
             if (hasImg) return 320;
@@ -817,17 +817,17 @@ export const App: React.FC = () => {
             return isHovered ? 270 : 230;
           case 'weather':
           case 'volume':
-            return isHovered ? 150 : 130;
+            return isHovered ? 160 : 140;
           case 'pomo':
           case 'tasks':
           case 'files':
           case 'battery':
-            return isHovered ? 130 : 110;
+            return isHovered ? 140 : 120;
           case 'idle':
           default: {
             const unreadCount = notifHistory.filter((n) => !n.read).length;
-            if (unreadCount > 0) return isHovered ? 160 : 140;
-            return isHovered ? 140 : 120;
+            if (unreadCount > 0) return isHovered ? 190 : 170;
+            return isHovered ? 170 : 150;
           }
         }
       };
@@ -905,20 +905,20 @@ export const App: React.FC = () => {
   }
 
   const getCompactWidthClass = () => {
-    if (isExpanded) return 'rounded-[18px] border border-island/[0.08]';
+    if (isExpanded) return 'rounded-[16px] border border-island/[0.08]';
 
-    const pill = 'h-[44px] hover:h-[48px] rounded-full px-4 justify-center border border-island/[0.06]';
+    const pill = 'h-[44px] hover:h-[48px] rounded-[14px] px-4 justify-center border border-island/[0.06]';
 
-    if (isDragOver) return 'w-[260px] h-[56px] rounded-[28px] px-4 justify-center border border-island/[0.10]';
+    if (isDragOver) return 'w-[260px] h-[56px] rounded-[16px] px-4 justify-center border border-island/[0.10]';
     if (isSplit) return `w-[260px] ${pill}`;
 
     switch (displaySlot) {
       case 'music':
-        return `w-[180px] h-[44px] hover:h-[48px] rounded-full px-3 justify-center border border-island/[0.06]`;
+        return `w-[184px] h-[44px] hover:h-[48px] rounded-[14px] px-3 justify-center border border-island/[0.06]`;
       case 'system-notification': {
         const hasImg = !!(systemNotif && systemNotif.imagePath);
         if (hasImg) {
-          return 'w-[320px] h-[80px] hover:h-[84px] rounded-[26px] px-3 justify-center border border-island/[0.08]';
+          return 'w-[320px] h-[80px] hover:h-[84px] rounded-[18px] px-3 justify-center border border-island/[0.08]';
         }
         return `w-[250px] hover:w-[270px] ${pill}`;
       }
@@ -928,19 +928,19 @@ export const App: React.FC = () => {
         return `w-[230px] hover:w-[270px] ${pill}`;
       case 'weather':
       case 'volume':
-        return `w-[130px] hover:w-[150px] ${pill}`;
+        return `w-[140px] hover:w-[160px] ${pill}`;
       case 'pomo':
       case 'tasks':
       case 'files':
       case 'battery':
-        return `w-[110px] hover:w-[130px] ${pill}`;
+        return `w-[120px] hover:w-[140px] ${pill}`;
       case 'idle':
       default: {
         const unreadCount = notifHistory.filter((n) => !n.read).length;
         if (unreadCount > 0) {
-          return `w-[140px] hover:w-[160px] ${pill}`;
+          return `w-[170px] hover:w-[190px] ${pill}`;
         }
-        return `w-[120px] hover:w-[140px] ${pill}`;
+        return `w-[150px] hover:w-[170px] ${pill}`;
       }
     }
   };
@@ -1007,7 +1007,7 @@ export const App: React.FC = () => {
         } as React.CSSProperties}
       >
         <div
-          className={`w-full flex-1 flex flex-col overflow-hidden ${isExpanded ? 'rounded-[18px] px-4 pt-[10px] pb-[16px]' : 'justify-center'}`}
+          className={`w-full flex-1 flex flex-col overflow-hidden ${isExpanded ? 'rounded-[16px] px-4 pt-[10px] pb-[16px]' : 'rounded-[14px] justify-center'}`}
         >
           {/* COMPACT STATE VIEW */}
           {!isExpanded && (
