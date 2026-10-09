@@ -106,7 +106,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
       return wrap(
         <div className="flex items-center justify-between w-full px-0.5 max-w-full">
           {/* Phía bên trái: Đĩa nhạc xoay tròn chứa ảnh bìa album | Left side: Circular rotating album art icon */}
-          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-island/[0.03] border border-island/[0.05] flex-shrink-0 flex items-center justify-center">
+          <div className={`relative w-5 h-5 rounded-full overflow-hidden bg-island/[0.03] border border-island/[0.05] flex-shrink-0 flex items-center justify-center ${localPlaying ? 'animate-disc-spin' : ''}`}>
             {track.cover_url ? (
               <img
                 src={track.cover_url}
@@ -142,7 +142,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
       return (
         <div className="flex items-center gap-2 text-warning-color">
           <Timer className="w-4 h-4" />
-          <span className="text-[12px] font-mono font-bold whitespace-nowrap">{pomoTime}</span>
+          <span key={pomoTime} className="text-[12px] font-mono font-bold whitespace-nowrap animate-tick">{pomoTime}</span>
         </div>
       );
 
@@ -170,12 +170,17 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
     case 'bluetooth':
       return wrap(
         <div className="flex items-center gap-2 px-1">
-          <div className={`p-1 rounded-full flex items-center justify-center ${
-            btStatus === 'connected' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
-          }`}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m7 7 10 10-5 5V2l5 5L7 17" />
-            </svg>
+          <div className="relative flex items-center justify-center flex-shrink-0">
+            {btStatus === 'connected' && (
+              <span className="absolute inset-0 rounded-full bg-emerald-400/40 animate-bt-ping pointer-events-none" />
+            )}
+            <div className={`p-1 rounded-full flex items-center justify-center ${
+              btStatus === 'connected' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+            }`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m7 7 10 10-5 5V2l5 5L7 17" />
+              </svg>
+            </div>
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-[11px] font-bold text-island/95 truncate max-w-[200px]">
@@ -248,7 +253,7 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
     case 'weather':
       return (
         <div className="flex items-center gap-2 text-accent-color">
-          {weatherIcon(weather?.code ?? 0)}
+          <span className={weather ? 'animate-weather-bob flex-shrink-0' : 'flex-shrink-0'}>{weatherIcon(weather?.code ?? 0)}</span>
           <span className="text-[12px] font-semibold text-island whitespace-nowrap">
             {weather ? `${weather.tempC}°` : '--'}
           </span>
@@ -275,7 +280,9 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
     case 'volume':
       return (
         <div className="flex items-center gap-2 text-accent-color w-full min-w-0">
-          {volume?.muted ? <VolumeX className="w-4 h-4 flex-shrink-0" /> : <Volume2 className="w-4 h-4 flex-shrink-0" />}
+          <span key={volume?.muted ? 'muted' : 'unmuted'} className="animate-badge-pop flex-shrink-0">
+            {volume?.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </span>
           <span className="text-[11px] font-semibold text-island whitespace-nowrap">
             {volume?.muted ? 'Muted' : `${volume?.level ?? 0}%`}
           </span>
@@ -380,8 +387,8 @@ export const CompactIsland: React.FC<CompactIslandProps> = ({
               }}
               className="relative flex items-center justify-center cursor-pointer hover:text-island transition-colors"
             >
-              <Bell className="w-3.5 h-3.5 text-island/50 animate-[bell-ring_1.5s_ease-in-out_infinite]" />
-              <span className="absolute -top-1 -right-1.5 min-w-[11px] h-[11px] px-0.5 rounded-full bg-[#ff3b30] text-island text-[7px] font-black flex items-center justify-center border border-island-surface leading-none">
+              <Bell className="w-3.5 h-3.5 text-island/50 animate-bell-ring" />
+              <span key={unreadNotifsCount} className="animate-badge-pop absolute -top-1 -right-1.5 min-w-[11px] h-[11px] px-0.5 rounded-full bg-[#ff3b30] text-island text-[7px] font-black flex items-center justify-center border border-island-surface leading-none">
                 {unreadNotifsCount}
               </span>
             </div>

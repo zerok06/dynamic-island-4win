@@ -992,7 +992,7 @@ export const App: React.FC = () => {
         onTransitionEnd={handleTransitionEnd}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`relative bg-island-surface text-island flex flex-col items-center justify-start transition-[width,height,border-radius,background-color] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none cursor-pointer ${getCompactWidthClass()} ${isDragOver ? 'island-drag-active' : ''} ${notifSlot ? 'animate-island-alert' : ''} ${settings.effectsEnabled && auraState !== 'none' ? `island-aura island-aura--${auraState}` : ''}`}
+        className={`relative island-glass island-surface-shadow text-island flex flex-col items-center justify-start transition-[width,height,border-radius,background-color] ease-[var(--ease-spring)] outline-none cursor-pointer ${getCompactWidthClass()} ${isDragOver ? 'island-drag-active' : ''} ${notifSlot ? 'animate-island-alert' : ''} ${settings.effectsEnabled && auraState !== 'none' ? `island-aura island-aura--${auraState}` : ''}`}
         style={{
           paddingTop: isExpanded ? '8px' : '0px',
           height: isExpanded || isTransitioningToCompact ? `${contentHeight}px` : undefined,
