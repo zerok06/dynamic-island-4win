@@ -10,7 +10,7 @@
     --accent: #007aff;
     color-scheme: dark;
     /* Motion tokens */
-    --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+    --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
     --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-decelerate: cubic-bezier(0.16, 1, 0.3, 1);
     --dur-fast: 180ms;
@@ -121,19 +121,21 @@
 .island-aura--notification {
   animation: auraFlash 0.9s ease-out 1;
 }
-/* Expanding ring on notification (iOS-like) */
+/* Soft halo on notification (no hard ring / no second shape) */
 .island-aura--notification::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   border-radius: inherit;
-  border: 2px solid rgb(var(--aura-rgb) / 0.6);
   pointer-events: none;
-  animation: auraRing 0.9s ease-out 1;
+  box-shadow: 0 0 24px 6px rgb(var(--aura-rgb) / 0.5);
+  opacity: 0;
+  animation: notifHalo 0.9s var(--ease-decelerate) 1;
 }
-@keyframes auraRing {
-  0%   { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0;   transform: scale(1.14); }
+@keyframes notifHalo {
+  0%   { opacity: 0;    transform: scale(0.97); }
+  25%  { opacity: 0.9; }
+  100% { opacity: 0;    transform: scale(1.05); }
 }
 
 /* ── Persistent mini equalizer (shown whenever music is playing) ───────── */
@@ -401,12 +403,12 @@
   animation: batteryChargeInlineEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes notifSlotEnter {
-  0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
-  65%  { transform: translateY(-1.5px) scale(1.04); }
+  0%   { opacity: 0; transform: translateY(4px) scale(0.97); }
+  60%  { transform: translateY(-0.5px) scale(1.01); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .notif-slot-enter {
-  animation: notifSlotEnter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: notifSlotEnter 0.4s var(--ease-spring) both;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -414,19 +416,18 @@
   height: 100%;
 }
 
-/* ── Island Squishy Alert bounce ───────────────────────── */
+/* ── Island soft alert (refined squash-and-stretch, macOS-like) ───────── */
 @keyframes islandAlert {
-  0% { transform: scale(1); }
-  15% { transform: scale(1.1, 0.9); } /* Squeeze height from bottom, widen sides */
-  30% { transform: scale(0.92, 1.08); } /* Stretch height downwards, narrow sides */
-  45% { transform: scale(1.04, 0.96); } /* Slight squeeze */
-  65% { transform: scale(0.98, 1.02); } /* Slight stretch */
-  85% { transform: scale(1.01, 0.99); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(1) translateY(0); }
+  22%  { transform: scale(0.976, 0.986) translateY(0.6px); }
+  46%  { transform: scale(1.014, 1.007) translateY(-0.5px); }
+  68%  { transform: scale(0.995, 0.998) translateY(0.2px); }
+  100% { transform: scale(1) translateY(0); }
 }
 .animate-island-alert {
-  animation: islandAlert 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: islandAlert 0.6s var(--ease-spring) both;
   transform-origin: top center;
+  will-change: transform;
 }
 
 /* ── Battery: inline charging group enter animation ──────── */
