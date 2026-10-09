@@ -32,6 +32,10 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
 
   const isTauri = !!(window as any).__TAURI__;
 
+  // Tareas pendientes arriba, completadas abajo (orden estable dentro de cada grupo) | Pending first, completed last (stable within each group)
+  const sortTasks = (list: LocalTask[]) =>
+    [...list].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+
   // Load Todos from SQLite Local DB or LocalStorage Mock
   const fetchTodos = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -39,7 +43,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
       try {
         const { invoke } = await import('@tauri-apps/api/core');
         const list = await invoke<LocalTask[]>('get_local_tasks', { today });
-        setTodos(list);
+        setTodos(sortTasks(list));
       } catch (err) {
         console.error('Failed to fetch local tasks:', err);
       }
@@ -48,7 +52,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
       if (saved) {
         const list: LocalTask[] = JSON.parse(saved);
         const filtered = list.filter((t) => t.done || !t.due_date || t.due_date <= today);
-        setTodos(filtered);
+        setTodos(sortTasks(filtered));
       } else {
         setTodos([]);
         localStorage.setItem('local_tasks_mock', JSON.stringify([]));
@@ -95,7 +99,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
         completed_at_unix_s: null,
       };
       setTodos((prev) => {
-        const next = [...prev, newTodo];
+        const next = sortTasks([...prev, newTodo]);
         localStorage.setItem('local_tasks_mock', JSON.stringify(next));
         return next;
       });
@@ -154,8 +158,9 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
           }
         }
 
-        localStorage.setItem('local_tasks_mock', JSON.stringify(next));
-        return next;
+        const sorted = sortTasks(next);
+        localStorage.setItem('local_tasks_mock', JSON.stringify(sorted));
+        return sorted;
       });
     }
   };
@@ -259,8 +264,9 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
     if (at === from) return;
 
     next.splice(at, 0, moved);
-    setTodos(next);
-    persistOrder(next);
+    const sorted = sortTasks(next);
+    setTodos(sorted);
+    persistOrder(sorted);
   };
 
   const formatTime = (unixS: number | null) => {
@@ -304,7 +310,7 @@ export const TabNotes: React.FC<TabNotesProps> = ({ onCountChange, language }) =
           return (
             <div
               key={todo.id}
-              className={`group flex items-center justify-between px-3 py-2 rounded-md transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${dragIndex === index ? 'opacity-40 ' : ''}${dropIndex === index && dragIndex !== index ? 'ring-1 ring-inset ring-success-color ' : ''}${
+              className={`group relative flex items-center justify-between px-3 py-2 rounded-md transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${index > 0 && isDone && !todos[index - 1].done ? 'task-first-done ' : ''}${dragIndex === index ? 'opacity-40 ' : ''}${dropIndex === index && dragIndex !== index ? 'ring-1 ring-inset ring-success-color ' : ''}${
                 editingId === todo.id
                   ? 'bg-island/[0.02] border border-success-color border-dashed'
                   : isDone

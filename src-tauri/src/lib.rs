@@ -563,7 +563,7 @@ fn get_local_tasks(today: String) -> Result<Vec<LocalTask>, String> {
         );
     }
 
-    let mut stmt = conn.prepare("SELECT id, name, done, due_date, rollover_count, created_at_unix_s, completed_at_unix_s FROM local_tasks WHERE done = 1 OR (done = 0 AND (due_date IS NULL OR due_date <= ?1)) ORDER BY COALESCE(sort_order, created_at_unix_s) ASC").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT id, name, done, due_date, rollover_count, created_at_unix_s, completed_at_unix_s FROM local_tasks WHERE done = 1 OR (done = 0 AND (due_date IS NULL OR due_date <= ?1)) ORDER BY done ASC, COALESCE(sort_order, created_at_unix_s) ASC").map_err(|e| e.to_string())?;
     let task_iter = stmt
         .query_map([&today], |row| {
             let done_int: i32 = row.get(2)?;

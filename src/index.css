@@ -463,6 +463,17 @@
   animation: matrixDotFade 1.2s infinite linear;
 }
 
+/* ── Tasks: subtle divider before the completed group ─────────────────── */
+.task-first-done::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -5px;
+  height: 1px;
+  background: rgb(var(--island-rgb) / 0.08);
+}
+
 /* ── Respect reduced motion (accessibility / low-power) ───────────────── */
 @media (prefers-reduced-motion: reduce) {
   .island-aura--playing,
